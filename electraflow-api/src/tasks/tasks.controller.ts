@@ -17,6 +17,18 @@ export class TasksController {
     return this.tasksService.findAll(assignedTo);
   }
 
+  @Get('my-tasks')
+  @ApiOperation({ summary: 'Listar tarefas atribuídas ao funcionário logado' })
+  async findMyTasks(@Request() req) {
+    return this.tasksService.findByEmployee(req.user.email);
+  }
+
+  @Get('my-pending')
+  @ApiOperation({ summary: 'Listar tarefas pendentes do funcionário logado' })
+  async findMyPending(@Request() req) {
+    return this.tasksService.findByEmployee(req.user.email, 'pending');
+  }
+
   @Get('by-work/:workId')
   @ApiOperation({ summary: 'Listar tarefas por obra' })
   async findByWork(@Param('workId') workId: string) {
@@ -31,13 +43,13 @@ export class TasksController {
 
   @Post()
   @ApiOperation({ summary: 'Criar tarefa' })
-  async create(@Body() taskData: Partial<Task>) {
+  async create(@Body() taskData: Partial<Task> & { resolverIds?: string[] }) {
     return this.tasksService.create(taskData);
   }
 
   @Put(':id')
   @ApiOperation({ summary: 'Atualizar tarefa' })
-  async update(@Param('id') id: string, @Body() taskData: Partial<Task>) {
+  async update(@Param('id') id: string, @Body() taskData: Partial<Task> & { resolverIds?: string[] }) {
     return this.tasksService.update(id, taskData);
   }
 
@@ -45,6 +57,13 @@ export class TasksController {
   @ApiOperation({ summary: 'Completar tarefa' })
   async complete(@Param('id') id: string, @Body('result') result: string, @Request() req) {
     return this.tasksService.complete(id, req.user.userId, result);
+  }
+
+  @Put(':id/resolvers')
+  @ApiOperation({ summary: 'Atualizar resolvedores da tarefa' })
+  async updateResolvers(@Param('id') id: string, @Body('resolverIds') resolverIds: string[]) {
+    await this.tasksService.syncResolvers(id, resolverIds || []);
+    return this.tasksService.findOne(id);
   }
 
   @Delete(':id')

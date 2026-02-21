@@ -7,18 +7,18 @@ export class MeasurementItem {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column()
+    @Column({ nullable: true })
     measurementId: string;
 
     @ManyToOne(() => Measurement, measurement => measurement.items, { onDelete: 'CASCADE' })
-    @JoinColumn({ name: 'measurement_id' })
+    @JoinColumn({ name: 'measurementId' })
     measurement: Measurement;
 
     @Column({ nullable: true })
     taskId: string;
 
     @ManyToOne(() => Task)
-    @JoinColumn({ name: 'task_id' })
+    @JoinColumn({ name: 'taskId' })
     task: Task;
 
     @Column({ type: 'decimal', precision: 5, scale: 2, default: 0 })

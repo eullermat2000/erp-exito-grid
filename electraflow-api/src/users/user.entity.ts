@@ -16,6 +16,29 @@ export enum UserStatus {
   PENDING = 'pending',
 }
 
+// Módulos disponíveis no sistema
+export const AVAILABLE_MODULES = [
+  'dashboard',
+  'pipeline',
+  'works',
+  'tasks',
+  'proposals',
+  'protocols',
+  'documents',
+  'employees',
+  'users',
+  'clients',
+  'finance',
+  'finance-simulator',
+  'catalog',
+  'suppliers',
+  'quotations',
+  'price-history',
+  'settings',
+] as const;
+
+export type ModulePermission = typeof AVAILABLE_MODULES[number];
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -63,6 +86,25 @@ export class User {
 
   @Column({ nullable: true })
   lastLoginAt: Date;
+
+  // === Permissões granulares por módulo ===
+  @Column('simple-json', { nullable: true, default: '[]' })
+  permissions: string[];
+
+  // === Hierarquia de supervisão ===
+  @Column({ nullable: true })
+  supervisorId: string;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'supervisorId' })
+  supervisor: User;
+
+  // === Controle de convite ===
+  @Column({ nullable: true })
+  invitedAt: Date;
+
+  @Column({ nullable: true })
+  invitedBy: string;
 
   @CreateDateColumn()
   createdAt: Date;

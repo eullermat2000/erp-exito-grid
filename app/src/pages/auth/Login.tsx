@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Zap, AlertCircle, Loader2 } from 'lucide-react';
+import { Zap, AlertCircle, Loader2, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Login() {
@@ -14,7 +14,8 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const [isClient, setIsClient] = useState(false);
+  const { login, clientLogin } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,19 +24,24 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      toast.success('Login realizado com sucesso!');
-
-      // Read user from localStorage to get role for redirect
-      const storedUser = localStorage.getItem('electraflow_user');
-      const user = storedUser ? JSON.parse(storedUser) : null;
-
-      if (user?.role === 'admin') {
-        navigate('/admin/dashboard');
-      } else if (['employee', 'commercial', 'engineer', 'finance'].includes(user?.role)) {
-        navigate('/employee/dashboard');
-      } else {
+      if (isClient) {
+        await clientLogin(email, password);
+        toast.success('Login realizado com sucesso!');
         navigate('/client/dashboard');
+      } else {
+        await login(email, password);
+        toast.success('Login realizado com sucesso!');
+
+        const storedUser = localStorage.getItem('electraflow_user');
+        const user = storedUser ? JSON.parse(storedUser) : null;
+
+        if (user?.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else if (['employee', 'commercial', 'engineer', 'finance'].includes(user?.role)) {
+          navigate('/employee/dashboard');
+        } else {
+          navigate('/client/dashboard');
+        }
       }
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Credenciais inválidas. Tente novamente.';
@@ -50,14 +56,16 @@ export default function Login() {
     <Card className="w-full border-0 shadow-2xl bg-white/95 backdrop-blur">
       <CardHeader className="space-y-4 text-center">
         <div className="flex justify-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
-            <Zap className="w-8 h-8 text-slate-900" />
+          <div className={`w-16 h-16 rounded-xl flex items-center justify-center shadow-lg ${isClient ? 'bg-gradient-to-br from-emerald-400 to-emerald-600' : 'bg-gradient-to-br from-amber-400 to-amber-600'}`}>
+            {isClient ? <Building2 className="w-8 h-8 text-white" /> : <Zap className="w-8 h-8 text-slate-900" />}
           </div>
         </div>
         <div>
-          <CardTitle className="text-2xl font-bold text-slate-900">ElectraFlow</CardTitle>
+          <CardTitle className="text-xl md:text-2xl font-bold text-slate-900">
+            {isClient ? 'Portal do Cliente' : 'ElectraFlow'}
+          </CardTitle>
           <CardDescription className="text-slate-500">
-            Sistema ERP para Engenharia Elétrica
+            {isClient ? 'Acompanhe suas obras e solicitações' : 'Sistema ERP para Engenharia Elétrica'}
           </CardDescription>
         </div>
       </CardHeader>
@@ -75,7 +83,7 @@ export default function Login() {
             <Input
               id="email"
               type="email"
-              placeholder="seu@email.com"
+              placeholder={isClient ? 'cliente@email.com' : 'seu@email.com'}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -98,7 +106,10 @@ export default function Login() {
 
           <Button
             type="submit"
-            className="w-full h-11 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-semibold"
+            className={`w-full h-11 font-semibold ${isClient
+              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white'
+              : 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900'
+              }`}
             disabled={isLoading}
           >
             {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -106,15 +117,29 @@ export default function Login() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-sm text-slate-500">
-            Não tem uma conta?{' '}
-            <Link to="/register" className="text-amber-600 hover:text-amber-700 font-semibold">
-              Criar conta
-            </Link>
-          </p>
+        <div className="mt-4">
+          <Button
+            type="button"
+            variant="ghost"
+            className="w-full text-sm"
+            onClick={() => { setIsClient(!isClient); setError(''); }}
+          >
+            {isClient ? '← Voltar ao login da equipe' : '🏢 Sou Cliente — acessar portal'}
+          </Button>
         </div>
+
+        {!isClient && (
+          <div className="mt-2 text-center">
+            <p className="text-sm text-slate-500">
+              Não tem uma conta?{' '}
+              <Link to="/register" className="text-amber-600 hover:text-amber-700 font-semibold">
+                Criar conta
+              </Link>
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
+

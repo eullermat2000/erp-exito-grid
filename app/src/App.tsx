@@ -25,8 +25,13 @@ import AdminEmployees from './pages/admin/Employees';
 import AdminUsers from './pages/admin/Users';
 import AdminClients from './pages/admin/Clients';
 import AdminFinance from './pages/admin/Finance';
+import AdminFinanceSimulator from './pages/admin/FinanceSimulator';
 import AdminSettings from './pages/admin/Settings';
 import AdminCatalogManagement from './pages/admin/CatalogManagement';
+import AdminSuppliers from './pages/admin/Suppliers';
+import AdminQuotations from './pages/admin/Quotations';
+import AdminPriceHistory from './pages/admin/PriceHistory';
+import AdminEmployeeCompliance from './pages/admin/EmployeeCompliance';
 
 // Employee Pages
 import EmployeeDashboard from './pages/employee/Dashboard';
@@ -40,15 +45,22 @@ import ClientDashboard from './pages/client/Dashboard';
 import ClientWorks from './pages/client/Works';
 import ClientWorkDetail from './pages/client/WorkDetail';
 import ClientDocuments from './pages/client/Documents';
+import ClientRequests from './pages/client/Requests';
 
 // Protected Route
 import ProtectedRoute from './components/ProtectedRoute';
+
+// Public Pages
+import ProposalSignature from './pages/public/ProposalSignature';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* Public Routes (sem autenticação) */}
+          <Route path="/assinar/:token" element={<ProposalSignature />} />
+
           {/* Auth Routes */}
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<Login />} />
@@ -69,11 +81,16 @@ function App() {
               <Route path="/admin/documents" element={<AdminDocuments />} />
               <Route path="/admin/clients" element={<AdminClients />} />
               <Route path="/admin/finance" element={<AdminFinance />} />
+              <Route path="/admin/finance-simulator" element={<AdminFinanceSimulator />} />
               <Route path="/admin/catalog" element={<AdminCatalogManagement />} />
+              <Route path="/admin/suppliers" element={<AdminSuppliers />} />
+              <Route path="/admin/quotations" element={<AdminQuotations />} />
+              <Route path="/admin/price-history" element={<AdminPriceHistory />} />
 
               {/* Restricted Admin-only routes */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/admin/employees" element={<AdminEmployees />} />
+                <Route path="/admin/employees/:id/compliance" element={<AdminEmployeeCompliance />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/settings" element={<AdminSettings />} />
               </Route>
@@ -100,6 +117,7 @@ function App() {
               <Route path="/client/works" element={<ClientWorks />} />
               <Route path="/client/works/:id" element={<ClientWorkDetail />} />
               <Route path="/client/documents" element={<ClientDocuments />} />
+              <Route path="/client/requests" element={<ClientRequests />} />
             </Route>
           </Route>
 

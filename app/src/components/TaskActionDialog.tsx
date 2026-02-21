@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Pencil, Loader2, Link2, Link2Off } from 'lucide-react';
+import { Pencil, Loader2, Link2, Link2Off, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/api';
 import type { Task } from '@/types';
@@ -69,6 +69,9 @@ export default function TaskActionDialog({
     const [linkedToWork, setLinkedToWork] = useState(false);
     const [worksOptions, setWorksOptions] = useState<WorkOption[]>([]);
     const [loadingWorks, setLoadingWorks] = useState(false);
+    const [employees, setEmployees] = useState<any[]>([]);
+    const [loadingEmployees, setLoadingEmployees] = useState(false);
+    const [selectedResolvers, setSelectedResolvers] = useState<string[]>([]);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -103,6 +106,13 @@ export default function TaskActionDialog({
             if (hasWork) {
                 loadWorks();
             }
+            // Pre-populate resolvers
+            if ((task as any).resolvers && Array.isArray((task as any).resolvers)) {
+                setSelectedResolvers((task as any).resolvers.map((r: any) => r.employeeId));
+            } else {
+                setSelectedResolvers([]);
+            }
+            loadEmployees();
         }
     }, [task, open]);
 
@@ -133,6 +143,19 @@ export default function TaskActionDialog({
         }
     }, [linkedToWork]);
 
+    const loadEmployees = async () => {
+        setLoadingEmployees(true);
+        try {
+            const data = await api.getEmployees();
+            const list = Array.isArray(data) ? data : (data?.data ?? []);
+            setEmployees(list);
+        } catch (error) {
+            console.error('Erro ao carregar colaboradores:', error);
+        } finally {
+            setLoadingEmployees(false);
+        }
+    };
+
     const validate = () => {
         const newErrors: Record<string, string> = {};
         if (!formData.title.trim()) newErrors.title = 'Título é obrigatório';
@@ -157,6 +180,7 @@ export default function TaskActionDialog({
                 description: formData.description || null,
                 dueDate: formData.dueDate || null,
                 estimatedHours: formData.estimatedHours ? Number(formData.estimatedHours) : null,
+                resolverIds: selectedResolvers,
             };
 
             if (linkedToWork && formData.workId) {
@@ -335,8 +359,8 @@ export default function TaskActionDialog({
                                     setFormData({ ...formData, workId: '', weightPercentage: '' });
                                 }}
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${!linkedToWork
-                                        ? 'border-amber-500 bg-amber-50 text-amber-700'
-                                        : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                                    ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
                                     }`}
                             >
                                 <Link2Off className="w-4 h-4" />
@@ -346,8 +370,8 @@ export default function TaskActionDialog({
                                 type="button"
                                 onClick={() => setLinkedToWork(true)}
                                 className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${linkedToWork
-                                        ? 'border-amber-500 bg-amber-50 text-amber-700'
-                                        : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                                    ? 'border-amber-500 bg-amber-50 text-amber-700'
+                                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
                                     }`}
                             >
                                 <Link2 className="w-4 h-4" />
@@ -436,6 +460,61 @@ export default function TaskActionDialog({
                                 setFormData({ ...formData, description: e.target.value })
                             }
                         />
+                    </div>
+
+                    {/* Resolvedores */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                            <Users className="w-4 h-4" />
+                            Resolvedores
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                            Selecione os colaboradores responsáveis por executar esta tarefa.
+                        </p>
+                        {loadingEmployees ? (
+                            <div className="flex items-center gap-2 text-sm text-slate-500 py-2">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Carregando colaboradores...
+                            </div>
+                        ) : employees.length === 0 ? (
+                            <p className="text-sm text-slate-400 py-2">Nenhum colaborador cadastrado.</p>
+                        ) : (
+                            <div className="border rounded-lg max-h-48 overflow-y-auto divide-y">
+                                {employees.map((emp: any) => {
+                                    const roleLabel = emp.role === 'operational' ? 'Operacional' : emp.role === 'engineering' ? 'Engenharia' : emp.role === 'administrative' ? 'Administrativo' : emp.role || '';
+                                    const typeLabel = emp.employmentType === 'clt' ? 'CLT' : emp.employmentType === 'contract' ? 'Empreiteiro' : emp.employmentType === 'outsourced' ? 'Terceirizado' : '';
+                                    return (
+                                        <label key={emp.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-amber-50/50 cursor-pointer transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                                                checked={selectedResolvers.includes(emp.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedResolvers([...selectedResolvers, emp.id]);
+                                                    } else {
+                                                        setSelectedResolvers(selectedResolvers.filter(id => id !== emp.id));
+                                                    }
+                                                }}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <span className="text-sm font-medium text-slate-700">{emp.name}</span>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    {roleLabel && <span className="text-xs text-slate-400">{roleLabel}</span>}
+                                                    {typeLabel && <span className="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">{typeLabel}</span>}
+                                                    {emp.specialty && <span className="text-xs text-slate-400">• {emp.specialty}</span>}
+                                                </div>
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {selectedResolvers.length > 0 && (
+                            <p className="text-xs text-amber-600 font-medium">
+                                {selectedResolvers.length} resolvedor(es) selecionado(s)
+                            </p>
+                        )}
                     </div>
 
                     <DialogFooter>

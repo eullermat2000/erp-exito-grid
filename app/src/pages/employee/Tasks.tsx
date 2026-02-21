@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,15 +19,9 @@ import {
   AlertCircle,
   Calendar,
   Play,
+  Loader2,
 } from 'lucide-react';
-import type { Task } from '@/types';
-
-const mockTasks: Task[] = [
-  { id: '1', title: 'Instalação de iluminação OB-001', status: 'in_progress', priority: 'high', estimatedHours: 8, deadline: '2024-06-18', createdAt: '2024-06-15', updatedAt: '2024-06-15' },
-  { id: '2', title: 'Revisar projeto elétrico OB-002', status: 'pending', priority: 'medium', estimatedHours: 4, deadline: '2024-06-19', createdAt: '2024-06-16', updatedAt: '2024-06-16' },
-  { id: '3', title: 'Preparar relatório de vistoria', status: 'pending', priority: 'low', estimatedHours: 2, deadline: '2024-06-20', createdAt: '2024-06-17', updatedAt: '2024-06-17' },
-  { id: '4', title: 'Vistoria inicial OB-003', status: 'completed', priority: 'high', estimatedHours: 3, actualHours: 3, deadline: '2024-06-10', completedAt: '2024-06-10', createdAt: '2024-06-05', updatedAt: '2024-06-10' },
-];
+import { api } from '@/api';
 
 const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
   pending: { label: 'Pendente', variant: 'outline' },
@@ -42,21 +36,44 @@ const priorityLabels: Record<string, { label: string; color: string }> = {
 };
 
 export default function EmployeeTasks() {
-  const [tasks] = useState<Task[]>(mockTasks);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await api.getMyTasks();
+        const list = Array.isArray(data) ? data : (data?.data ?? []);
+        setTasks(list);
+      } catch (error) {
+        console.error('Erro ao carregar tarefas:', error);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
   const filteredTasks = tasks.filter((task) =>
-    task.title.toLowerCase().includes(searchTerm.toLowerCase())
+    (task.title || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
   const inProgressTasks = tasks.filter(t => t.status === 'in_progress').length;
   const pendingTasks = tasks.filter(t => t.status === 'pending').length;
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Minhas Tarefas</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-slate-900">Minhas Tarefas</h1>
         <p className="text-slate-500">Gerencie suas tarefas diárias</p>
       </div>
 
@@ -123,6 +140,7 @@ export default function EmployeeTasks() {
             <TableHeader>
               <TableRow>
                 <TableHead>Tarefa</TableHead>
+                <TableHead>Obra</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Prioridade</TableHead>
                 <TableHead>Prazo</TableHead>
@@ -131,26 +149,36 @@ export default function EmployeeTasks() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {filteredTasks.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-slate-400 py-8">
+                    Nenhuma tarefa encontrada.
+                  </TableCell>
+                </TableRow>
+              )}
               {filteredTasks.map((task) => (
                 <TableRow key={task.id}>
                   <TableCell>
                     <p className="font-medium">{task.title}</p>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={statusLabels[task.status].variant}>
-                      {statusLabels[task.status].label}
+                    <span className="text-sm text-slate-500">{task.work?.code || '-'}</span>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={statusLabels[task.status]?.variant || 'outline'}>
+                      {statusLabels[task.status]?.label || task.status}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <div className={`w-2 h-2 rounded-full ${priorityLabels[task.priority].color}`} />
-                      {priorityLabels[task.priority].label}
+                      <div className={`w-2 h-2 rounded-full ${priorityLabels[task.priority]?.color || 'bg-slate-400'}`} />
+                      {priorityLabels[task.priority]?.label || task.priority || '-'}
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-slate-400" />
-                      {task.deadline ? new Date(task.deadline).toLocaleDateString('pt-BR') : '-'}
+                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString('pt-BR') : task.deadline ? new Date(task.deadline).toLocaleDateString('pt-BR') : '-'}
                     </div>
                   </TableCell>
                   <TableCell>

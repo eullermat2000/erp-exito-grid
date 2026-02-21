@@ -8,6 +8,13 @@ export interface User {
   phone?: string;
   avatar?: string;
   isActive: boolean;
+  permissions?: string[];
+  department?: string;
+  position?: string;
+  supervisorId?: string;
+  supervisor?: User;
+  status?: 'active' | 'inactive' | 'pending';
+  invitedAt?: string;
   createdAt: string;
 }
 
@@ -305,4 +312,101 @@ export interface Employee {
   documents?: EmployeeDocument[];
   createdAt: string;
   updatedAt: string;
+}
+
+// ==================== SUPPLY CHAIN ====================
+
+export type SupplierSegment = 'material' | 'service' | 'both';
+export type SupplierStatus = 'active' | 'inactive' | 'blocked';
+
+export interface SupplierContact {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  role?: string;
+  isPrimary: boolean;
+  supplierId: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  tradeName?: string;
+  cnpj?: string;
+  email?: string;
+  phone?: string;
+  whatsapp?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  segment: SupplierSegment;
+  status: SupplierStatus;
+  rating: number;
+  notes?: string;
+  paymentTerms?: string;
+  contacts?: SupplierContact[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type QuotationStatus = 'draft' | 'sent' | 'received' | 'analyzed' | 'closed';
+
+export interface QuotationItem {
+  id: string;
+  catalogItemId?: string;
+  catalogItem?: any;
+  description: string;
+  quantity: number;
+  unit: string;
+  responseItems?: QuotationResponseItem[];
+}
+
+export interface QuotationResponseItem {
+  id: string;
+  quotationItemId: string;
+  unitPrice: number;
+  totalPrice: number;
+  notes?: string;
+  quotationResponse?: QuotationResponseData;
+}
+
+export interface QuotationResponseData {
+  id: string;
+  supplierId: string;
+  supplier?: Supplier;
+  status: 'pending' | 'received' | 'selected' | 'rejected';
+  receivedAt?: string;
+  validUntil?: string;
+  deliveryDays?: number;
+  paymentTerms?: string;
+  notes?: string;
+  items?: QuotationResponseItem[];
+}
+
+export interface QuotationRequest {
+  id: string;
+  code: string;
+  title: string;
+  status: QuotationStatus;
+  deadline?: string;
+  notes?: string;
+  items: QuotationItem[];
+  responses?: QuotationResponseData[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PriceHistoryEntry {
+  id: string;
+  catalogItemId: string;
+  catalogItem?: any;
+  supplierId: string;
+  supplier?: Supplier;
+  unitPrice: number;
+  date: string;
+  source: 'quotation' | 'manual' | 'import';
+  quotationResponseId?: string;
+  createdAt: string;
 }

@@ -108,7 +108,7 @@ export default function AdminProtocols() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Protocolos</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Protocolos</h1>
           <p className="text-slate-500">Gerencie processos e aprovações em tempo real</p>
         </div>
         <Button

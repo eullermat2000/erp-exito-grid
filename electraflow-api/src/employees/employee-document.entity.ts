@@ -2,6 +2,24 @@ import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, Jo
 import { Employee } from './employee.entity';
 
 export enum EmployeeDocumentType {
+    // Identification
+    CPF_RG = 'cpf_rg',
+    CTPS = 'ctps',
+    CONTRACT = 'contract',
+
+    // Health & Safety NRs
+    ASO = 'aso',
+    NR10 = 'nr10',
+    NR35 = 'nr35',
+    NR12 = 'nr12',
+    NR33 = 'nr33',
+    NR06 = 'nr06',
+
+    // Training & Certifications
+    TRAINING = 'training',
+    CERTIFICATION = 'certification',
+
+    // Legacy
     IDENTIFICATION = 'identification',
     HEALTH = 'health',
     SAFETY = 'safety',

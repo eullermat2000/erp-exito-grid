@@ -7,9 +7,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  clientLogin: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   hasRole: (roles: UserRole[]) => boolean;
+  hasPermission: (module: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,12 +35,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await api.login(email, password);
 
-      // data = { access_token, user: { id, name, email, role, avatarUrl } }
       const loggedUser: User = {
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
         role: mapBackendRole(data.user.role),
+        permissions: data.user.permissions || [],
+        department: data.user.department,
+        position: data.user.position,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+      };
+
+      localStorage.setItem('electraflow_token', data.access_token);
+      localStorage.setItem('electraflow_user', JSON.stringify(loggedUser));
+      setUser(loggedUser);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const clientLogin = useCallback(async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      const data = await api.clientLogin(email, password);
+
+      const loggedUser: User = {
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        role: 'client' as UserRole,
+        permissions: [],
         isActive: true,
         createdAt: new Date().toISOString(),
       };
@@ -71,6 +98,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return roles.includes(user.role);
   }, [user]);
 
+  const hasPermission = useCallback((module: string) => {
+    if (!user) return false;
+    // Admin tem acesso total
+    if (user.role === 'admin') return true;
+    // Verifica permissões granulares
+    const permissions = user.permissions || [];
+    return permissions.includes(module);
+  }, [user]);
+
   return (
     <AuthContext.Provider
       value={{
@@ -78,9 +114,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isAuthenticated: !!user,
         isLoading,
         login,
+        clientLogin,
         register,
         logout,
         hasRole,
+        hasPermission,
       }}
     >
       {children}

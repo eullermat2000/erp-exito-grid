@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,14 +8,9 @@ import {
   FileText,
   Image,
   Download,
+  Loader2,
 } from 'lucide-react';
-import type { Document } from '@/types';
-
-const mockDocuments: Document[] = [
-  { id: '1', name: 'Projeto Elétrico - OB-2024-001.pdf', fileName: 'projeto.pdf', type: 'project' as any, mimeType: 'application/pdf', size: 2500000, createdAt: '2024-01-16', updatedAt: '2024-01-16', url: '#', version: 1 },
-  { id: '2', name: 'Contrato de Serviço.pdf', fileName: 'contrato.pdf', type: 'contract' as any, mimeType: 'application/pdf', size: 1500000, createdAt: '2024-01-18', updatedAt: '2024-01-18', url: '#', version: 1 },
-  { id: '3', name: 'ART - Responsabilidade Técnica.pdf', fileName: 'art.pdf', type: 'other' as any, mimeType: 'application/pdf', size: 800000, createdAt: '2024-01-19', updatedAt: '2024-01-19', url: '#', version: 1 },
-];
+import { api } from '@/api';
 
 const categoryLabels: Record<string, { label: string; color: string; icon: any }> = {
   project: { label: 'Projeto', color: 'bg-blue-100 text-blue-700', icon: FileText },
@@ -25,30 +20,67 @@ const categoryLabels: Record<string, { label: string; color: string; icon: any }
 };
 
 export default function ClientDocuments() {
-  const [documents] = useState<Document[]>(mockDocuments);
+  const [documents, setDocuments] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadDocs = async () => {
+      try {
+        // Fetch all works to get their documents
+        const works = await api.getClientMyWorks();
+        const allDocs: any[] = [];
+        for (const work of (works || [])) {
+          try {
+            const workDetail = await api.getClientMyWork(work.id);
+            const docs = workDetail?.documents || [];
+            docs.forEach((doc: any) => {
+              allDocs.push({ ...doc, workTitle: work.title, workCode: work.code });
+            });
+          } catch {
+            // skip
+          }
+        }
+        setDocuments(allDocs);
+      } catch (err) {
+        console.error('Erro ao carregar documentos:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadDocs();
+  }, []);
 
   const filteredDocuments = documents.filter((doc) =>
-    doc.name.toLowerCase().includes(searchTerm.toLowerCase())
+    (doc.name || doc.fileName || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatSize = (bytes: number) => {
+    if (!bytes) return '';
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Meus Documentos</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-slate-900">Meus Documentos</h1>
         <p className="text-slate-500">Acesse todos os documentos das suas obras</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {Object.entries(categoryLabels).map(([key, config]) => {
           const Icon = config.icon;
-          const count = documents.filter(d => d.type === key).length;
+          const count = documents.filter(d => (d.type || 'other') === key).length;
           return (
             <Card key={key} className="cursor-pointer hover:shadow-md transition-shadow">
               <CardContent className="p-4 flex items-center gap-3">
@@ -75,37 +107,53 @@ export default function ClientDocuments() {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredDocuments.map((doc) => {
-          const category = categoryLabels[doc.type as string];
-          const Icon = category?.icon || FileText;
-          return (
-            <Card key={doc.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-4">
-                <div className="flex items-start gap-4">
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${category?.color || 'bg-slate-100'}`}>
-                    <Icon className="w-6 h-6" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate" title={doc.name}>{doc.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">{category?.label || doc.type}</Badge>
-                      <span className="text-xs text-slate-500">{formatSize(doc.size || 0)}</span>
+      {filteredDocuments.length === 0 ? (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+            <p className="text-slate-500">Nenhum documento encontrado</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredDocuments.map((doc) => {
+            const category = categoryLabels[(doc.type as string) || 'other'] || categoryLabels.other;
+            const Icon = category?.icon || FileText;
+            return (
+              <Card key={doc.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-4">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${category?.color || 'bg-slate-100'}`}>
+                      <Icon className="w-6 h-6" />
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">
-                      {new Date(doc.createdAt).toLocaleDateString('pt-BR')}
-                    </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate" title={doc.name || doc.fileName}>{doc.name || doc.fileName}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline" className="text-xs">{category?.label || 'Documento'}</Badge>
+                        <span className="text-xs text-slate-500">{formatSize(doc.size || 0)}</span>
+                      </div>
+                      {doc.workTitle && (
+                        <p className="text-xs text-slate-400 mt-1">📋 {doc.workCode} — {doc.workTitle}</p>
+                      )}
+                      <p className="text-xs text-slate-400 mt-1">
+                        {doc.createdAt ? new Date(doc.createdAt).toLocaleDateString('pt-BR') : ''}
+                      </p>
+                    </div>
                   </div>
-                </div>
-                <Button variant="outline" size="sm" className="w-full mt-4">
-                  <Download className="w-4 h-4 mr-2" />
-                  Download
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                  {doc.url && (
+                    <Button variant="outline" size="sm" className="w-full mt-4" asChild>
+                      <a href={doc.url} target="_blank" rel="noopener noreferrer">
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </a>
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

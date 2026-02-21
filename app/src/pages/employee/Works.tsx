@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,57 +16,49 @@ import {
   Search,
   Building2,
   ArrowRight,
-  Calendar,
-  MapPin,
+  Loader2,
 } from 'lucide-react';
-import type { Work } from '@/types';
-
-const mockWorks: Work[] = [
-  {
-    id: '1',
-    code: 'OB-2024-001',
-    title: 'Instalação Elétrica Residencial',
-    client: { id: '1', name: 'João Silva', email: 'joao@email.com', phone: '(11) 99999-9999', hasPortalAccess: true, segment: 'residential', type: 'individual', createdAt: '2024-01-01' },
-    type: 'residential',
-    status: 'in_progress',
-    address: 'Rua das Flores, 123',
-    city: 'São Paulo',
-    state: 'SP',
-    estimatedValue: 25000,
-    progress: 75,
-    createdAt: '2024-01-15',
-    updatedAt: '2024-06-15',
-  },
-  {
-    id: '2',
-    code: 'OB-2024-002',
-    title: 'Projeto Comercial Shopping',
-    client: { id: '2', name: 'Maria Empreendimentos', email: 'maria@emp.com', phone: '(11) 98888-8888', hasPortalAccess: true, segment: 'commercial', type: 'company', createdAt: '2024-01-10' },
-    type: 'commercial',
-    status: 'in_progress',
-    address: 'Av. Paulista, 1000',
-    city: 'São Paulo',
-    state: 'SP',
-    estimatedValue: 120000,
-    progress: 30,
-    createdAt: '2024-02-01',
-    updatedAt: '2024-06-14',
-  },
-];
+import { api } from '@/api';
 
 export default function EmployeeWorks() {
-  const [works] = useState<Work[]>(mockWorks);
+  const [works, setWorks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const data = await api.getMyWorks();
+        const list = Array.isArray(data) ? data : (data?.data ?? []);
+        setWorks(list);
+      } catch (error) {
+        console.error('Erro ao carregar obras:', error);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
   const filteredWorks = works.filter((work) =>
-    work.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    work.code.toLowerCase().includes(searchTerm.toLowerCase())
+    (work.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (work.code || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const activeWorks = works.filter(w => w.status === 'in_progress').length;
+  const completedWorks = works.filter(w => w.status === 'completed').length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Minhas Obras</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-slate-900">Minhas Obras</h1>
         <p className="text-slate-500">Obras atribuídas a você</p>
       </div>
 
@@ -78,29 +70,29 @@ export default function EmployeeWorks() {
             </div>
             <div>
               <p className="text-2xl font-bold">{works.length}</p>
-              <p className="text-sm text-slate-500">Obras Ativas</p>
+              <p className="text-sm text-slate-500">Total de Obras</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
             <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-emerald-600" />
+              <Building2 className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">3</p>
-              <p className="text-sm text-slate-500">Vistorias Esta Semana</p>
+              <p className="text-2xl font-bold">{activeWorks}</p>
+              <p className="text-sm text-slate-500">Em Andamento</p>
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-4">
             <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-              <MapPin className="w-5 h-5 text-amber-600" />
+              <Building2 className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">5</p>
-              <p className="text-sm text-slate-500">Locais de Obra</p>
+              <p className="text-2xl font-bold">{completedWorks}</p>
+              <p className="text-sm text-slate-500">Concluídas</p>
             </div>
           </CardContent>
         </Card>
@@ -129,22 +121,29 @@ export default function EmployeeWorks() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {filteredWorks.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center text-slate-400 py-8">
+                    Nenhuma obra encontrada.
+                  </TableCell>
+                </TableRow>
+              )}
               {filteredWorks.map((work) => (
                 <TableRow key={work.id}>
                   <TableCell className="font-medium">{work.code}</TableCell>
                   <TableCell>
                     <div>
                       <p className="font-medium">{work.title}</p>
-                      <p className="text-sm text-slate-500">{work.city}, {work.state}</p>
+                      <p className="text-sm text-slate-500">{work.city}{work.state ? `, ${work.state}` : ''}</p>
                     </div>
                   </TableCell>
-                  <TableCell>{work.client.name}</TableCell>
+                  <TableCell>{work.client?.name || '-'}</TableCell>
                   <TableCell>
                     <div className="w-24">
                       <div className="flex justify-between text-xs mb-1">
-                        <span>{work.progress}%</span>
+                        <span>{work.progress || 0}%</span>
                       </div>
-                      <Progress value={work.progress} className="h-2" />
+                      <Progress value={work.progress || 0} className="h-2" />
                     </div>
                   </TableCell>
                   <TableCell>

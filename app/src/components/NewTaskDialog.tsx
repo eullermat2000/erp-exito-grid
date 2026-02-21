@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ClipboardList, Loader2, Link2, Link2Off } from 'lucide-react';
+import { ClipboardList, Loader2, Link2, Link2Off, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/api';
 
@@ -59,6 +59,9 @@ export default function NewTaskDialog({
     const [linkedToWork, setLinkedToWork] = useState(false);
     const [worksOptions, setWorksOptions] = useState<WorkOption[]>([]);
     const [loadingWorks, setLoadingWorks] = useState(false);
+    const [employees, setEmployees] = useState<any[]>([]);
+    const [loadingEmployees, setLoadingEmployees] = useState(false);
+    const [selectedResolvers, setSelectedResolvers] = useState<string[]>([]);
 
     const [formData, setFormData] = useState({
         title: '',
@@ -80,6 +83,13 @@ export default function NewTaskDialog({
         }
     }, [linkedToWork]);
 
+    // Load employees on open
+    useEffect(() => {
+        if (open && employees.length === 0) {
+            loadEmployees();
+        }
+    }, [open]);
+
     const loadWorks = async () => {
         setLoadingWorks(true);
         try {
@@ -97,6 +107,19 @@ export default function NewTaskDialog({
             toast.error('Não foi possível carregar as obras.');
         } finally {
             setLoadingWorks(false);
+        }
+    };
+
+    const loadEmployees = async () => {
+        setLoadingEmployees(true);
+        try {
+            const data = await api.getEmployees();
+            const list = Array.isArray(data) ? data : (data?.data ?? []);
+            setEmployees(list);
+        } catch (error) {
+            console.error('Erro ao carregar colaboradores:', error);
+        } finally {
+            setLoadingEmployees(false);
         }
     };
 
@@ -122,6 +145,7 @@ export default function NewTaskDialog({
             estimatedHours: '',
         });
         setLinkedToWork(false);
+        setSelectedResolvers([]);
         setErrors({});
     };
 
@@ -152,6 +176,10 @@ export default function NewTaskDialog({
             }
             if (formData.estimatedHours && Number(formData.estimatedHours) > 0) {
                 payload.estimatedHours = Number(formData.estimatedHours);
+            }
+
+            if (selectedResolvers.length > 0) {
+                payload.resolverIds = selectedResolvers;
             }
 
             await api.createTask(payload);
@@ -402,6 +430,61 @@ export default function NewTaskDialog({
                                 setFormData({ ...formData, description: e.target.value })
                             }
                         />
+                    </div>
+
+                    {/* Resolvedores */}
+                    <div className="space-y-4">
+                        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                            <Users className="w-4 h-4" />
+                            Resolvedores
+                        </h3>
+                        <p className="text-xs text-slate-400">
+                            Selecione os colaboradores responsáveis por executar esta tarefa.
+                        </p>
+                        {loadingEmployees ? (
+                            <div className="flex items-center gap-2 text-sm text-slate-500 py-2">
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Carregando colaboradores...
+                            </div>
+                        ) : employees.length === 0 ? (
+                            <p className="text-sm text-slate-400 py-2">Nenhum colaborador cadastrado.</p>
+                        ) : (
+                            <div className="border rounded-lg max-h-48 overflow-y-auto divide-y">
+                                {employees.map((emp: any) => {
+                                    const roleLabel = emp.role === 'operational' ? 'Operacional' : emp.role === 'engineering' ? 'Engenharia' : emp.role === 'administrative' ? 'Administrativo' : emp.role || '';
+                                    const typeLabel = emp.employmentType === 'clt' ? 'CLT' : emp.employmentType === 'contract' ? 'Empreiteiro' : emp.employmentType === 'outsourced' ? 'Terceirizado' : '';
+                                    return (
+                                        <label key={emp.id} className="flex items-center gap-3 px-3 py-2.5 hover:bg-amber-50/50 cursor-pointer transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                className="rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                                                checked={selectedResolvers.includes(emp.id)}
+                                                onChange={(e) => {
+                                                    if (e.target.checked) {
+                                                        setSelectedResolvers([...selectedResolvers, emp.id]);
+                                                    } else {
+                                                        setSelectedResolvers(selectedResolvers.filter(id => id !== emp.id));
+                                                    }
+                                                }}
+                                            />
+                                            <div className="flex-1 min-w-0">
+                                                <span className="text-sm font-medium text-slate-700">{emp.name}</span>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    {roleLabel && <span className="text-xs text-slate-400">{roleLabel}</span>}
+                                                    {typeLabel && <span className="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">{typeLabel}</span>}
+                                                    {emp.specialty && <span className="text-xs text-slate-400">• {emp.specialty}</span>}
+                                                </div>
+                                            </div>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        {selectedResolvers.length > 0 && (
+                            <p className="text-xs text-amber-600 font-medium">
+                                {selectedResolvers.length} resolvedor(es) selecionado(s)
+                            </p>
+                        )}
                     </div>
 
                     <DialogFooter>

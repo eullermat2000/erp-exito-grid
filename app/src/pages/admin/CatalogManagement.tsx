@@ -213,7 +213,7 @@ export default function AdminCatalogManagement() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Catálogo de Composições</h1>
+                    <h1 className="text-xl md:text-2xl font-bold text-slate-900">Catálogo de Composições</h1>
                     <p className="text-slate-500">Gerencie materiais e serviços cadastrados no sistema</p>
                 </div>
                 <div className="flex gap-2">

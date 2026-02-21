@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { FileText, Loader2 } from 'lucide-react';
+import { FileText, Loader2, Upload, X, File as FileIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/api';
 
@@ -53,6 +53,12 @@ const documentTypes: Record<string, string> = {
     other: 'Outro',
 };
 
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function UploadDocumentDialog({
     open,
     onOpenChange,
@@ -64,17 +70,15 @@ export default function UploadDocumentDialog({
     const [works, setWorks] = useState<WorkOption[]>([]);
     const [folders, setFolders] = useState<FolderOption[]>([]);
     const [loadingWorks, setLoadingWorks] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [formData, setFormData] = useState({
         name: '',
-        fileName: '',
         type: 'other' as string,
-        url: '',
         workId: preselectedWorkId || '',
         folderId: preselectedFolderId || '',
         description: '',
-        size: '',
-        mimeType: '',
     });
 
     useEffect(() => {
@@ -122,49 +126,51 @@ export default function UploadDocumentDialog({
     const resetForm = () => {
         setFormData({
             name: '',
-            fileName: '',
             type: 'other',
-            url: '',
             workId: preselectedWorkId || '',
             folderId: preselectedFolderId || '',
             description: '',
-            size: '',
-            mimeType: '',
         });
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            if (!formData.name) {
+                setFormData(prev => ({ ...prev, name: file.name.replace(/\.[^/.]+$/, '') }));
+            }
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.name.trim()) {
-            toast.error('Nome do documento é obrigatório.');
+        if (!selectedFile) {
+            toast.error('Selecione um arquivo para upload.');
             return;
         }
-        if (!formData.url.trim()) {
-            toast.error('URL do arquivo é obrigatória.');
+        if (!formData.name.trim()) {
+            toast.error('Nome do documento é obrigatório.');
             return;
         }
 
         setLoading(true);
         try {
-            const payload: any = {
+            await api.uploadDocument(selectedFile, {
                 name: formData.name,
-                fileName: formData.fileName || formData.name,
                 type: formData.type,
-                url: formData.url,
-                description: formData.description || null,
-            };
-            if (formData.workId) payload.workId = formData.workId;
-            if (formData.folderId) payload.folderId = formData.folderId;
-            if (formData.size) payload.size = Number(formData.size);
-            if (formData.mimeType) payload.mimeType = formData.mimeType;
-
-            await api.createDocument(payload);
-            toast.success('Documento cadastrado com sucesso!');
+                workId: formData.workId || undefined,
+                folderId: formData.folderId || undefined,
+                description: formData.description || undefined,
+            });
+            toast.success('Documento enviado com sucesso!');
             resetForm();
             onOpenChange(false);
             onDocumentCreated();
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Erro ao cadastrar documento.');
+            toast.error(error?.response?.data?.message || 'Erro ao enviar documento.');
         } finally {
             setLoading(false);
         }
@@ -179,13 +185,46 @@ export default function UploadDocumentDialog({
                             <FileText className="w-5 h-5 text-amber-600" />
                         </div>
                         <div>
-                            <DialogTitle className="text-xl">Cadastrar Documento</DialogTitle>
-                            <DialogDescription>Registre um documento no sistema.</DialogDescription>
+                            <DialogTitle className="text-xl">Upload de Documento</DialogTitle>
+                            <DialogDescription>Selecione um arquivo do seu computador.</DialogDescription>
                         </div>
                     </div>
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+                    {/* File Picker */}
+                    <div>
+                        <Label>Arquivo *</Label>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            onChange={handleFileChange}
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.dwg,.zip,.rar"
+                        />
+                        {selectedFile ? (
+                            <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg mt-1">
+                                <FileIcon className="w-5 h-5 text-green-600 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium truncate">{selectedFile.name}</p>
+                                    <p className="text-xs text-slate-500">{formatFileSize(selectedFile.size)}</p>
+                                </div>
+                                <Button type="button" variant="ghost" size="sm" onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>
+                                    <X className="w-4 h-4" />
+                                </Button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="flex items-center justify-center gap-2 w-full p-6 mt-1 border-2 border-dashed border-slate-300 rounded-lg hover:border-amber-400 hover:bg-amber-50/50 transition-colors text-sm text-slate-500"
+                            >
+                                <Upload className="w-5 h-5" />
+                                Clique para selecionar ou arraste um arquivo
+                            </button>
+                        )}
+                    </div>
+
                     <div>
                         <Label htmlFor="doc-name">Nome do Documento *</Label>
                         <Input
@@ -193,16 +232,6 @@ export default function UploadDocumentDialog({
                             placeholder="Ex: Projeto Elétrico - OB-2024-001"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        />
-                    </div>
-
-                    <div>
-                        <Label htmlFor="doc-url">URL do Arquivo *</Label>
-                        <Input
-                            id="doc-url"
-                            placeholder="https://..."
-                            value={formData.url}
-                            onChange={(e) => setFormData({ ...formData, url: e.target.value })}
                         />
                     </div>
 
@@ -290,10 +319,10 @@ export default function UploadDocumentDialog({
                         <Button
                             type="submit"
                             className="bg-amber-500 hover:bg-amber-600 text-slate-900"
-                            disabled={loading}
+                            disabled={loading || !selectedFile}
                         >
                             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            {loading ? 'Cadastrando...' : 'Cadastrar'}
+                            {loading ? 'Enviando...' : 'Enviar Arquivo'}
                         </Button>
                     </DialogFooter>
                 </form>

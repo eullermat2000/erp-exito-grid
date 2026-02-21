@@ -37,7 +37,7 @@ export class Opportunity {
   @Column({ nullable: true })
   clientId: string;
 
-  @ManyToOne(() => Client, client => client.works)
+  @ManyToOne(() => Client)
   @JoinColumn({ name: 'clientId' })
   client: Client;
 

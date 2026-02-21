@@ -2,12 +2,18 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Payment, PaymentStatus, PaymentType, TransactionCategory } from './payment.entity';
+import { WorkCost } from './work-cost.entity';
+import { PaymentSchedule } from './payment-schedule.entity';
 
 @Injectable()
 export class FinanceService {
   constructor(
     @InjectRepository(Payment)
     private paymentRepository: Repository<Payment>,
+    @InjectRepository(WorkCost)
+    private workCostRepository: Repository<WorkCost>,
+    @InjectRepository(PaymentSchedule)
+    private paymentScheduleRepository: Repository<PaymentSchedule>,
   ) { }
 
   async findAll(status?: PaymentStatus, workId?: string): Promise<Payment[]> {
@@ -16,7 +22,7 @@ export class FinanceService {
     if (workId) where.workId = workId;
     return this.paymentRepository.find({
       where,
-      relations: ['work', 'work.client'],
+      relations: ['work', 'work.client', 'supplier', 'employee'],
       order: { dueDate: 'ASC' },
     });
   }
@@ -24,7 +30,7 @@ export class FinanceService {
   async findOne(id: string): Promise<Payment> {
     const payment = await this.paymentRepository.findOne({
       where: { id },
-      relations: ['work'],
+      relations: ['work', 'supplier', 'employee'],
     });
     if (!payment) {
       throw new NotFoundException('Pagamento não encontrado');
@@ -65,28 +71,24 @@ export class FinanceService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [pendingIncome, overdueIncome, pendingExpense, receivedMonth, paidMonth] = await Promise.all([
-      // Contas a Receber (Pendente)
       this.paymentRepository
         .createQueryBuilder('p')
         .where('p.type = :type', { type: PaymentType.INCOME })
         .andWhere('p.status IN (:...statuses)', { statuses: [PaymentStatus.PENDING, PaymentStatus.PARTIAL] })
         .select('SUM(p.amount - p.paidAmount)', 'total')
         .getRawOne(),
-      // Contas a Receber (Vencido)
       this.paymentRepository
         .createQueryBuilder('p')
         .where('p.type = :type', { type: PaymentType.INCOME })
         .andWhere('p.status = :status', { status: PaymentStatus.OVERDUE })
         .select('SUM(p.amount - p.paidAmount)', 'total')
         .getRawOne(),
-      // Contas a Pagar (Pendente)
       this.paymentRepository
         .createQueryBuilder('p')
         .where('p.type = :type', { type: PaymentType.EXPENSE })
         .andWhere('p.status IN (:...statuses)', { statuses: [PaymentStatus.PENDING, PaymentStatus.PARTIAL] })
         .select('SUM(p.amount - p.paidAmount)', 'total')
         .getRawOne(),
-      // Recebido este mês
       this.paymentRepository
         .createQueryBuilder('p')
         .where('p.status = :status', { status: PaymentStatus.PAID })
@@ -94,7 +96,6 @@ export class FinanceService {
         .andWhere('p.paidAt >= :start', { start: startOfMonth })
         .select('SUM(p.paidAmount)', 'total')
         .getRawOne(),
-      // Pago este mês
       this.paymentRepository
         .createQueryBuilder('p')
         .where('p.status = :status', { status: PaymentStatus.PAID })
@@ -111,7 +112,7 @@ export class FinanceService {
       receivedThisMonth: Number(receivedMonth?.total || 0),
       paidThisMonth: Number(paidMonth?.total || 0),
       balance: Number(receivedMonth?.total || 0) - Number(paidMonth?.total || 0),
-      currentBalance: 0, // Should be calculated from account balance if tracked
+      currentBalance: 0,
       projectedProfit: Number(pendingIncome?.total || 0) - Number(pendingExpense?.total || 0),
     };
   }
@@ -165,4 +166,84 @@ export class FinanceService {
   async remove(id: string): Promise<void> {
     await this.paymentRepository.delete(id);
   }
+
+  async attachInvoice(id: string, filename: string, originalName: string): Promise<Payment> {
+    const payment = await this.findOne(id);
+    payment.invoiceFile = filename;
+    payment.invoiceFileName = originalName;
+    return this.paymentRepository.save(payment);
+  }
+
+  // ═══ WORK COSTS ══════════════════════════════════════════════════════════
+
+  async findAllWorkCosts(workId?: string): Promise<WorkCost[]> {
+    const where: any = {};
+    if (workId) where.workId = workId;
+    return this.workCostRepository.find({
+      where,
+      relations: ['work', 'supplier', 'employee', 'payment'],
+      order: { date: 'DESC', createdAt: 'DESC' },
+    });
+  }
+
+  async findOneWorkCost(id: string): Promise<WorkCost> {
+    const cost = await this.workCostRepository.findOne({
+      where: { id },
+      relations: ['work', 'supplier', 'employee'],
+    });
+    if (!cost) throw new NotFoundException('Custo não encontrado');
+    return cost;
+  }
+
+  async createWorkCost(data: Partial<WorkCost>): Promise<WorkCost> {
+    const cost = this.workCostRepository.create(data);
+    return this.workCostRepository.save(cost);
+  }
+
+  async updateWorkCost(id: string, data: Partial<WorkCost>): Promise<WorkCost> {
+    const cost = await this.findOneWorkCost(id);
+    Object.assign(cost, data);
+    return this.workCostRepository.save(cost);
+  }
+
+  async removeWorkCost(id: string): Promise<void> {
+    await this.workCostRepository.delete(id);
+  }
+
+  // ═══ PAYMENT SCHEDULES ═══════════════════════════════════════════════════
+
+  async findAllPaymentSchedules(workId?: string): Promise<PaymentSchedule[]> {
+    const where: any = {};
+    if (workId) where.workId = workId;
+    return this.paymentScheduleRepository.find({
+      where,
+      relations: ['work', 'supplier', 'employee', 'payment'],
+      order: { dueDate: 'ASC' },
+    });
+  }
+
+  async findOnePaymentSchedule(id: string): Promise<PaymentSchedule> {
+    const schedule = await this.paymentScheduleRepository.findOne({
+      where: { id },
+      relations: ['work', 'supplier', 'employee'],
+    });
+    if (!schedule) throw new NotFoundException('Programação não encontrada');
+    return schedule;
+  }
+
+  async createPaymentSchedule(data: Partial<PaymentSchedule>): Promise<PaymentSchedule> {
+    const schedule = this.paymentScheduleRepository.create(data);
+    return this.paymentScheduleRepository.save(schedule);
+  }
+
+  async updatePaymentSchedule(id: string, data: Partial<PaymentSchedule>): Promise<PaymentSchedule> {
+    const schedule = await this.findOnePaymentSchedule(id);
+    Object.assign(schedule, data);
+    return this.paymentScheduleRepository.save(schedule);
+  }
+
+  async removePaymentSchedule(id: string): Promise<void> {
+    await this.paymentScheduleRepository.delete(id);
+  }
 }
+

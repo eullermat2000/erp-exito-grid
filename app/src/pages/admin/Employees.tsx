@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,8 @@ import {
   User,
   Heart,
   Shield,
-  Eye
+  Eye,
+  ShieldCheck,
 } from 'lucide-react';
 import { api } from '@/api';
 import type { Employee } from '@/types';
@@ -43,6 +45,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 export default function AdminEmployees() {
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,7 +101,7 @@ export default function AdminEmployees() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Funcionários</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900">Funcionários</h1>
           <p className="text-slate-500">Gerencie os colaboradores e documentações técnicas</p>
         </div>
         <Button
@@ -120,7 +123,7 @@ export default function AdminEmployees() {
               <Users className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{employees.length}</p>
+              <p className="text-xl md:text-2xl font-bold text-slate-900">{employees.length}</p>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Total Geral</p>
             </div>
           </CardContent>
@@ -131,7 +134,7 @@ export default function AdminEmployees() {
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{activeCount}</p>
+              <p className="text-xl md:text-2xl font-bold text-slate-900">{activeCount}</p>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Ativos</p>
             </div>
           </CardContent>
@@ -142,7 +145,7 @@ export default function AdminEmployees() {
               <Clock className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">{employees.length - activeCount}</p>
+              <p className="text-xl md:text-2xl font-bold text-slate-900">{employees.length - activeCount}</p>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Inativos</p>
             </div>
           </CardContent>
@@ -153,7 +156,7 @@ export default function AdminEmployees() {
               <Building2 className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-900">12</p>
+              <p className="text-xl md:text-2xl font-bold text-slate-900">12</p>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Alocações</p>
             </div>
           </CardContent>
@@ -272,6 +275,9 @@ export default function AdminEmployees() {
                           setIsViewerOpen(true);
                         }}>
                           <Eye className="w-4 h-4 mr-2" /> Visualizar Documentos
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate(`/admin/employees/${employee.id}/compliance`)}>
+                          <ShieldCheck className="w-4 h-4 mr-2" /> Documentação NR/SST
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => {
                           setSelectedEmployee(employee);

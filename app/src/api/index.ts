@@ -80,6 +80,24 @@ class ApiService {
     return response.data;
   }
 
+  async inviteUser(data: {
+    name: string;
+    email: string;
+    role: string;
+    permissions: string[];
+    supervisorId?: string;
+    department?: string;
+    position?: string;
+  }) {
+    const response = await this.client.post('/users/invite', data);
+    return response.data;
+  }
+
+  async updateUserPermissions(id: string, permissions: string[]) {
+    const response = await this.client.put(`/users/${id}/permissions`, { permissions });
+    return response.data;
+  }
+
   // Clients
   async getClients() {
     const response = await this.client.get('/clients');
@@ -288,13 +306,15 @@ class ApiService {
     return response.data;
   }
 
-  async uploadDocuments(files: File[], data?: { workId?: string; taskId?: string; type?: string; folderId?: string }) {
+  async uploadDocument(file: File, data?: { name?: string; workId?: string; taskId?: string; type?: string; folderId?: string; description?: string }) {
     const formData = new FormData();
-    files.forEach((file) => formData.append('files', file));
+    formData.append('file', file);
+    if (data?.name) formData.append('name', data.name);
     if (data?.workId) formData.append('workId', data.workId);
     if (data?.taskId) formData.append('taskId', data.taskId);
     if (data?.type) formData.append('type', data.type);
     if (data?.folderId) formData.append('folderId', data.folderId);
+    if (data?.description) formData.append('description', data.description);
 
     const response = await this.client.post('/documents/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -303,7 +323,7 @@ class ApiService {
   }
 
   async downloadDocument(id: string) {
-    const response = await this.client.get(`/documents/${id}/download`, {
+    const response = await this.client.get(`/documents/${id}/file`, {
       responseType: 'blob',
     });
     return response.data;
@@ -497,6 +517,27 @@ class ApiService {
     return response.data;
   }
 
+  // Assinatura Digital
+  async generateSignatureLink(proposalId: string) {
+    const response = await this.client.post(`/proposals/${proposalId}/generate-signature-link`);
+    return response.data;
+  }
+
+  async getSignatureStatus(proposalId: string) {
+    const response = await this.client.get(`/proposals/${proposalId}/signature-status`);
+    return response.data;
+  }
+
+  async getProposalByToken(token: string) {
+    const response = await this.client.get(`/proposals/sign/${token}`);
+    return response.data;
+  }
+
+  async signProposalByToken(token: string, data: { name: string; document: string }) {
+    const response = await this.client.post(`/proposals/sign/${token}/confirm`, data);
+    return response.data;
+  }
+
   // Catalog
   async getCatalogCategories(type?: string) {
     const params = type ? { type } : {};
@@ -677,12 +718,28 @@ class ApiService {
   }
 
   async deletePayment(id: string) {
-    const response = await this.client.post(`/finance/payments/${id}/delete`);
+    const response = await this.client.delete(`/finance/payments/${id}`);
     return response.data;
   }
 
   async registerPayment(id: string, data: { amount: number; method: string; transactionId?: string }) {
     const response = await this.client.post(`/finance/payments/${id}/register`, data);
+    return response.data;
+  }
+
+  async uploadPaymentInvoice(id: string, file: File) {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await this.client.post(`/finance/payments/${id}/invoice`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async downloadPaymentInvoice(id: string) {
+    const response = await this.client.get(`/finance/payments/${id}/invoice`, {
+      responseType: 'blob',
+    });
     return response.data;
   }
 
@@ -712,6 +769,383 @@ class ApiService {
     const response = await this.client.post(`/measurements/${id}/approve`);
     return response.data;
   }
+
+  // Supply — Suppliers
+  async getSuppliers(filters?: { segment?: string; status?: string }) {
+    const response = await this.client.get('/supply/suppliers', { params: filters });
+    return response.data;
+  }
+
+  async getSupplier(id: string) {
+    const response = await this.client.get(`/supply/suppliers/${id}`);
+    return response.data;
+  }
+
+  async createSupplier(data: any) {
+    const response = await this.client.post('/supply/suppliers', data);
+    return response.data;
+  }
+
+  async updateSupplier(id: string, data: any) {
+    const response = await this.client.put(`/supply/suppliers/${id}`, data);
+    return response.data;
+  }
+
+  async deleteSupplier(id: string) {
+    const response = await this.client.delete(`/supply/suppliers/${id}`);
+    return response.data;
+  }
+
+  async addSupplierContact(supplierId: string, data: any) {
+    const response = await this.client.post(`/supply/suppliers/${supplierId}/contacts`, data);
+    return response.data;
+  }
+
+  async deleteSupplierContact(id: string) {
+    const response = await this.client.delete(`/supply/contacts/${id}`);
+    return response.data;
+  }
+
+  // Supply — Quotations
+  async getQuotations(status?: string) {
+    const params = status ? { status } : {};
+    const response = await this.client.get('/supply/quotations', { params });
+    return response.data;
+  }
+
+  async getQuotation(id: string) {
+    const response = await this.client.get(`/supply/quotations/${id}`);
+    return response.data;
+  }
+
+  async createQuotation(data: any) {
+    const response = await this.client.post('/supply/quotations', data);
+    return response.data;
+  }
+
+  async addQuotationResponse(quotationId: string, data: any) {
+    const response = await this.client.post(`/supply/quotations/${quotationId}/responses`, data);
+    return response.data;
+  }
+
+  async selectQuotationResponse(responseId: string) {
+    const response = await this.client.post(`/supply/responses/${responseId}/select`);
+    return response.data;
+  }
+
+  async compareQuotation(quotationId: string) {
+    const response = await this.client.get(`/supply/quotations/${quotationId}/compare`);
+    return response.data;
+  }
+
+  // Supply — Price History & Markup
+  async getPriceHistory(catalogItemId: string, filters?: { supplierId?: string; startDate?: string; endDate?: string }) {
+    const response = await this.client.get(`/supply/price-history/${catalogItemId}`, { params: filters });
+    return response.data;
+  }
+
+  async addPriceManual(data: { catalogItemId: string; supplierId: string; unitPrice: number; date?: string }) {
+    const response = await this.client.post('/supply/price-history', data);
+    return response.data;
+  }
+
+  async getBestPrice(catalogItemId: string) {
+    const response = await this.client.get(`/supply/best-price/${catalogItemId}`);
+    return response.data;
+  }
+
+  async calculateMarkup(data: { catalogItemId: string; markupPercent: number; supplierId?: string }) {
+    const response = await this.client.post('/supply/markup-calculator', data);
+    return response.data;
+  }
+
+  async priceComparison(catalogItemIds: string[]) {
+    const response = await this.client.post('/supply/price-comparison', { catalogItemIds });
+    return response.data;
+  }
+
+  // ═══ WORK COSTS ══════════════════════════════════════════════════════════
+
+  async getWorkCosts(workId?: string) {
+    const params = workId ? { workId } : {};
+    const response = await this.client.get('/finance/work-costs', { params });
+    return response.data;
+  }
+
+  async createWorkCost(data: any) {
+    const response = await this.client.post('/finance/work-costs', data);
+    return response.data;
+  }
+
+  async updateWorkCost(id: string, data: any) {
+    const response = await this.client.put(`/finance/work-costs/${id}`, data);
+    return response.data;
+  }
+
+  async deleteWorkCost(id: string) {
+    const response = await this.client.delete(`/finance/work-costs/${id}`);
+    return response.data;
+  }
+
+  // ═══ PAYMENT SCHEDULES ═══════════════════════════════════════════════════
+
+  async getPaymentSchedules(workId?: string) {
+    const params = workId ? { workId } : {};
+    const response = await this.client.get('/finance/payment-schedules', { params });
+    return response.data;
+  }
+
+  async createPaymentSchedule(data: any) {
+    const response = await this.client.post('/finance/payment-schedules', data);
+    return response.data;
+  }
+
+  async updatePaymentSchedule(id: string, data: any) {
+    const response = await this.client.put(`/finance/payment-schedules/${id}`, data);
+    return response.data;
+  }
+
+  async deletePaymentSchedule(id: string) {
+    const response = await this.client.delete(`/finance/payment-schedules/${id}`);
+    return response.data;
+  }
+
+  // ═══ CLIENT PORTAL ══════════════════════════════════════════════════════════
+
+  async clientLogin(email: string, password: string) {
+    const response = await this.client.post('/auth/client-login', { email, password });
+    return response.data;
+  }
+
+  async getClientMyWorks() {
+    const response = await this.client.get('/client-portal/my-works');
+    return response.data;
+  }
+
+  async getClientMyWork(id: string) {
+    const response = await this.client.get(`/client-portal/my-works/${id}`);
+    return response.data;
+  }
+
+  async getClientMyRequests() {
+    const response = await this.client.get('/client-portal/my-requests');
+    return response.data;
+  }
+
+  async createClientRequest(data: { type: string; subject: string; description: string; workId?: string; priority?: string }) {
+    const response = await this.client.post('/client-portal/requests', data);
+    return response.data;
+  }
+
+  async getClientProfile() {
+    const response = await this.client.get('/auth/client-profile');
+    return response.data;
+  }
+
+  async generateClientAccess(clientId: string) {
+    const response = await this.client.post(`/clients/${clientId}/generate-access`);
+    return response.data;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // COMPLIANCE — Documentação Ocupacional (NR/SST)
+  // ═══════════════════════════════════════════════════════════════
+
+  // Document Types
+  async getDocumentTypes() {
+    const response = await this.client.get('/compliance/document-types');
+    return response.data;
+  }
+
+  async getDocumentType(id: string) {
+    const response = await this.client.get(`/compliance/document-types/${id}`);
+    return response.data;
+  }
+
+  async createDocumentType(data: any) {
+    const response = await this.client.post('/compliance/document-types', data);
+    return response.data;
+  }
+
+  async updateDocumentType(id: string, data: any) {
+    const response = await this.client.put(`/compliance/document-types/${id}`, data);
+    return response.data;
+  }
+
+  async deleteDocumentType(id: string) {
+    const response = await this.client.delete(`/compliance/document-types/${id}`);
+    return response.data;
+  }
+
+  // Document Type Rules
+  async getDocumentTypeRules(docTypeId: string) {
+    const response = await this.client.get(`/compliance/document-types/${docTypeId}/rules`);
+    return response.data;
+  }
+
+  async createDocumentTypeRule(docTypeId: string, data: any) {
+    const response = await this.client.post(`/compliance/document-types/${docTypeId}/rules`, data);
+    return response.data;
+  }
+
+  async deleteDocumentTypeRule(ruleId: string) {
+    const response = await this.client.delete(`/compliance/rules/${ruleId}`);
+    return response.data;
+  }
+
+  // Employee Requirements (Checklist)
+  async getEmployeeRequirements(employeeId: string) {
+    const response = await this.client.get(`/compliance/employees/${employeeId}/requirements`);
+    return response.data;
+  }
+
+  async generateEmployeeChecklist(employeeId: string) {
+    const response = await this.client.post(`/compliance/employees/${employeeId}/generate-checklist`);
+    return response.data;
+  }
+
+  async addManualRequirement(employeeId: string, data: {
+    documentTypeId?: string;
+    customName?: string;
+    customCategory?: string;
+    customNrs?: string[];
+    customValidityMonths?: number | null;
+    customRequiresApproval?: boolean;
+  }) {
+    const response = await this.client.post(`/compliance/employees/${employeeId}/add-requirement`, data);
+    return response.data;
+  }
+
+  async setRequirementApplicability(requirementId: string, data: { applicability: string; justification?: string }) {
+    const response = await this.client.put(`/compliance/requirements/${requirementId}/applicability`, data);
+    return response.data;
+  }
+
+  // Compliance Documents
+  async getComplianceDocuments(employeeId: string) {
+    const response = await this.client.get(`/compliance/employees/${employeeId}/documents`);
+    return response.data;
+  }
+
+  async createComplianceDocument(data: any) {
+    const response = await this.client.post('/compliance/documents', data);
+    return response.data;
+  }
+
+  // File Upload (real files from machine)
+  async uploadComplianceFile(complianceDocId: string, file: File, dates?: { issueDate?: string; expiryDate?: string }) {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (dates?.issueDate) formData.append('issueDate', dates.issueDate);
+    if (dates?.expiryDate) formData.append('expiryDate', dates.expiryDate);
+    const response = await this.client.post(`/compliance/documents/${complianceDocId}/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async uploadComplianceFiles(complianceDocId: string, files: File[], dates?: { issueDate?: string; expiryDate?: string }) {
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f));
+    if (dates?.issueDate) formData.append('issueDate', dates.issueDate);
+    if (dates?.expiryDate) formData.append('expiryDate', dates.expiryDate);
+    const response = await this.client.post(`/compliance/documents/${complianceDocId}/upload-multiple`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async quickUploadCompliance(files: File[], data: {
+    requirementId?: string;
+    documentTypeId: string;
+    ownerType: string;
+    ownerId: string;
+    issueDate?: string;
+    expiryDate?: string;
+  }) {
+    const formData = new FormData();
+    files.forEach(f => formData.append('files', f));
+    if (data.requirementId) formData.append('requirementId', data.requirementId);
+    formData.append('documentTypeId', data.documentTypeId);
+    formData.append('ownerType', data.ownerType);
+    formData.append('ownerId', data.ownerId);
+    if (data.issueDate) formData.append('issueDate', data.issueDate);
+    if (data.expiryDate) formData.append('expiryDate', data.expiryDate);
+    const response = await this.client.post('/compliance/upload-quick', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  getComplianceFileUrl(fileUrl: string) {
+    // fileUrl is like "/api/compliance/files/uuid.pdf"
+    const base = API_URL.replace(/\/api$/, '');
+    return `${base}${fileUrl}`;
+  }
+
+  async downloadComplianceFile(filename: string) {
+    const base = API_URL.replace(/\/api$/, '');
+    const token = localStorage.getItem('electraflow_token');
+    const response = await fetch(`${base}/api/compliance/files/${filename}/download`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error('Erro ao baixar arquivo');
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async getDocumentVersions(complianceDocId: string) {
+    const response = await this.client.get(`/compliance/documents/${complianceDocId}/versions`);
+    return response.data;
+  }
+
+  // Approval
+  async approveComplianceDocument(complianceDocId: string, comments?: string) {
+    const response = await this.client.post(`/compliance/documents/${complianceDocId}/approve`, { comments });
+    return response.data;
+  }
+
+  async rejectComplianceDocument(complianceDocId: string, reason: string) {
+    const response = await this.client.post(`/compliance/documents/${complianceDocId}/reject`, { reason });
+    return response.data;
+  }
+
+  // Summary
+  async getComplianceSummary(employeeId: string) {
+    const response = await this.client.get(`/compliance/employees/${employeeId}/summary`);
+    return response.data;
+  }
+
+  // Audit Logs
+  async getComplianceAuditLogs(params?: { entityType?: string; entityId?: string; limit?: number }) {
+    const response = await this.client.get('/compliance/audit-logs', { params });
+    return response.data;
+  }
+
+  // Seed
+  async seedDocumentTypes() {
+    const response = await this.client.post('/compliance/seed');
+    return response.data;
+  }
+
+  // Retention Policies
+  async getRetentionPolicies() {
+    const response = await this.client.get('/compliance/retention-policies');
+    return response.data;
+  }
+
+  async createRetentionPolicy(data: any) {
+    const response = await this.client.post('/compliance/retention-policies', data);
+    return response.data;
+  }
 }
 
 export const api = new ApiService();
+

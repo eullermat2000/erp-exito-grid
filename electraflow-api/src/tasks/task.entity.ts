@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { Work } from '../works/work.entity';
+import { TaskResolver } from './task-resolver.entity';
 
 export enum TaskPriority {
   LOW = 'low',
@@ -120,6 +121,9 @@ export class Task {
 
   @Column({ nullable: true })
   startDate: Date;
+
+  @OneToMany(() => TaskResolver, resolver => resolver.task, { cascade: true })
+  resolvers: TaskResolver[];
 
   @CreateDateColumn()
   createdAt: Date;

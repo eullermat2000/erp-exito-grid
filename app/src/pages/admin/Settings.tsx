@@ -37,7 +37,7 @@ export default function AdminSettings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Configurações</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-slate-900">Configurações</h1>
         <p className="text-slate-500">Configure o sistema e fluxos de trabalho</p>
       </div>
 

@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { Work, WorkStatus } from './work.entity';
 import { WorkUpdate } from './work-update.entity';
 import { Client } from '../clients/client.entity';
+import { Employee } from '../employees/employee.entity';
+import { TaskResolver } from '../tasks/task-resolver.entity';
 
 @Injectable()
 export class WorksService {
@@ -14,6 +16,10 @@ export class WorksService {
     private clientRepository: Repository<Client>,
     @InjectRepository(WorkUpdate)
     private workUpdateRepository: Repository<WorkUpdate>,
+    @InjectRepository(Employee)
+    private employeeRepository: Repository<Employee>,
+    @InjectRepository(TaskResolver)
+    private resolverRepository: Repository<TaskResolver>,
   ) { }
 
   async findAll(status?: WorkStatus): Promise<Work[]> {
@@ -21,6 +27,33 @@ export class WorksService {
     if (status) where.status = status;
     return this.workRepository.find({
       where,
+      relations: ['client'],
+      order: { updatedAt: 'DESC' },
+    });
+  }
+
+  /**
+   * Find works where the employee is a resolver on at least one task.
+   */
+  async findMyWorks(email: string): Promise<Work[]> {
+    const employee = await this.employeeRepository.findOneBy({ email });
+    if (!employee) return [];
+
+    // Find distinct workIds from tasks where this employee is a resolver
+    const resolverRows = await this.resolverRepository
+      .createQueryBuilder('resolver')
+      .innerJoin('resolver.task', 'task')
+      .select('DISTINCT task.workId', 'workId')
+      .where('resolver.employeeId = :empId', { empId: employee.id })
+      .andWhere('task.workId IS NOT NULL')
+      .getRawMany();
+
+    if (resolverRows.length === 0) return [];
+
+    const workIds = resolverRows.map(r => r.workId);
+
+    return this.workRepository.find({
+      where: workIds.map(id => ({ id })),
       relations: ['client'],
       order: { updatedAt: 'DESC' },
     });

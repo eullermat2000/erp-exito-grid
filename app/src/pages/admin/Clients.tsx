@@ -99,7 +99,7 @@ export default function AdminClients() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
             <Building2 className="w-6 h-6 text-amber-500" />
             Clientes
           </h1>

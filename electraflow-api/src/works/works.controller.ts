@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Request, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -27,6 +27,12 @@ export class WorksController {
   @ApiOperation({ summary: 'Listar obras' })
   async findAll(@Query('status') status?: WorkStatus) {
     return this.worksService.findAll(status);
+  }
+
+  @Get('my-works')
+  @ApiOperation({ summary: 'Listar obras do funcionário logado' })
+  async findMyWorks(@Request() req) {
+    return this.worksService.findMyWorks(req.user.email);
   }
 
   @Get(':id')

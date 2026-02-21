@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ClientsService } from './clients.service';
 import { Client } from './client.entity';
 import { ClientDocument } from './client-document.entity';
+import { ClientRequest } from './client-request.entity';
 
 @ApiTags('Clientes')
 @Controller('clients')
@@ -25,7 +26,7 @@ export class ClientsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Criar cliente' })
+  @ApiOperation({ summary: 'Criar cliente (gera acesso ao portal automaticamente)' })
   async create(@Body() clientData: Partial<Client>) {
     return this.clientsService.create(clientData);
   }
@@ -40,6 +41,12 @@ export class ClientsController {
   @ApiOperation({ summary: 'Remover cliente' })
   async remove(@Param('id') id: string) {
     return this.clientsService.remove(id);
+  }
+
+  @Post(':id/generate-access')
+  @ApiOperation({ summary: 'Gerar/resetar senha do portal para o cliente' })
+  async generatePortalAccess(@Param('id') id: string) {
+    return this.clientsService.generatePortalAccess(id);
   }
 
   @Post(':id/documents')
@@ -60,3 +67,38 @@ export class ClientsController {
     return this.clientsService.removeDocument(id);
   }
 }
+
+// ═══ CLIENT PORTAL CONTROLLER ═══════════════════════════════════════════════
+
+@ApiTags('Portal do Cliente')
+@Controller('client-portal')
+@UseGuards(JwtAuthGuard)
+@ApiBearerAuth()
+export class ClientPortalController {
+  constructor(private clientsService: ClientsService) { }
+
+  @Get('my-works')
+  @ApiOperation({ summary: 'Obras do cliente logado' })
+  async getMyWorks(@Request() req) {
+    return this.clientsService.getClientWorks(req.user.userId);
+  }
+
+  @Get('my-works/:id')
+  @ApiOperation({ summary: 'Detalhe de obra do cliente' })
+  async getMyWorkDetail(@Request() req, @Param('id') workId: string) {
+    return this.clientsService.getClientWorkDetail(req.user.userId, workId);
+  }
+
+  @Get('my-requests')
+  @ApiOperation({ summary: 'Solicitações do cliente logado' })
+  async getMyRequests(@Request() req) {
+    return this.clientsService.getClientRequests(req.user.userId);
+  }
+
+  @Post('requests')
+  @ApiOperation({ summary: 'Criar nova solicitação' })
+  async createRequest(@Request() req, @Body() data: Partial<ClientRequest>) {
+    return this.clientsService.createClientRequest(req.user.userId, data);
+  }
+}
+

@@ -1,42 +1,59 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Building2, 
-  ClipboardList, 
-  CheckCircle2, 
+import {
+  Building2,
+  ClipboardList,
+  CheckCircle2,
   Clock,
   ArrowRight,
   AlertCircle,
   Calendar,
+  Loader2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
-const myWorks = [
-  { id: '1', code: 'OB-2024-001', title: 'Instalação Elétrica Residencial', progress: 75, status: 'in_progress', deadline: '2024-03-20' },
-  { id: '2', code: 'OB-2024-002', title: 'Projeto Comercial Shopping', progress: 30, status: 'in_progress', deadline: '2024-06-30' },
-];
-
-const myTasks = [
-  { id: '1', title: 'Instalação de iluminação OB-001', priority: 'high', deadline: '2024-06-18', status: 'in_progress' },
-  { id: '2', title: 'Revisar projeto elétrico OB-002', priority: 'medium', deadline: '2024-06-19', status: 'pending' },
-  { id: '3', title: 'Preparar relatório de vistoria', priority: 'low', deadline: '2024-06-20', status: 'pending' },
-];
+import { api } from '@/api';
 
 export default function EmployeeDashboard() {
-  const [stats] = useState({
-    totalWorks: 2,
-    completedTasks: 12,
-    pendingTasks: 3,
-    hoursThisWeek: 32,
-  });
+  const [works, setWorks] = useState<any[]>([]);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [w, t] = await Promise.allSettled([
+          api.getMyWorks(),
+          api.getMyTasks(),
+        ]);
+        setWorks(w.status === 'fulfilled' ? (Array.isArray(w.value) ? w.value : w.value?.data ?? []) : []);
+        setTasks(t.status === 'fulfilled' ? (Array.isArray(t.value) ? t.value : t.value?.data ?? []) : []);
+      } catch (error) {
+        console.error('Erro ao carregar dashboard:', error);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
+  const inProgressTasks = tasks.filter(t => t.status === 'in_progress').length;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Meu Dashboard</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-slate-900">Meu Dashboard</h1>
         <p className="text-slate-500">Visão geral das suas atividades</p>
       </div>
 
@@ -47,7 +64,7 @@ export default function EmployeeDashboard() {
               <Building2 className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.totalWorks}</p>
+              <p className="text-2xl font-bold">{works.length}</p>
               <p className="text-sm text-slate-500">Minhas Obras</p>
             </div>
           </CardContent>
@@ -58,7 +75,7 @@ export default function EmployeeDashboard() {
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.completedTasks}</p>
+              <p className="text-2xl font-bold">{completedTasks}</p>
               <p className="text-sm text-slate-500">Tarefas Concluídas</p>
             </div>
           </CardContent>
@@ -69,7 +86,7 @@ export default function EmployeeDashboard() {
               <ClipboardList className="w-5 h-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.pendingTasks}</p>
+              <p className="text-2xl font-bold">{pendingTasks}</p>
               <p className="text-sm text-slate-500">Tarefas Pendentes</p>
             </div>
           </CardContent>
@@ -80,8 +97,8 @@ export default function EmployeeDashboard() {
               <Clock className="w-5 h-5 text-purple-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{stats.hoursThisWeek}h</p>
-              <p className="text-sm text-slate-500">Horas Esta Semana</p>
+              <p className="text-2xl font-bold">{inProgressTasks}</p>
+              <p className="text-sm text-slate-500">Em Andamento</p>
             </div>
           </CardContent>
         </Card>
@@ -99,27 +116,30 @@ export default function EmployeeDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {myWorks.map((work) => (
+              {works.length === 0 && <p className="text-sm text-slate-400">Nenhuma obra atribuída.</p>}
+              {works.slice(0, 5).map((work) => (
                 <div key={work.id} className="p-4 bg-slate-50 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <div>
                       <span className="text-xs font-medium text-slate-500">{work.code}</span>
                       <p className="font-medium">{work.title}</p>
                     </div>
-                    <Badge variant={work.status === 'in_progress' ? 'default' : 'secondary'}>
-                      Em Andamento
+                    <Badge variant={work.status === 'completed' ? 'default' : 'secondary'}>
+                      {work.status === 'in_progress' ? 'Em Andamento' : work.status === 'completed' ? 'Concluída' : work.status}
                     </Badge>
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-slate-500">Progresso</span>
-                      <span>{work.progress}%</span>
+                      <span>{work.progress || 0}%</span>
                     </div>
-                    <Progress value={work.progress} className="h-2" />
-                    <div className="flex items-center gap-2 text-sm text-slate-500">
-                      <Calendar className="w-4 h-4" />
-                      Prazo: {new Date(work.deadline).toLocaleDateString('pt-BR')}
-                    </div>
+                    <Progress value={work.progress || 0} className="h-2" />
+                    {work.deadline && (
+                      <div className="flex items-center gap-2 text-sm text-slate-500">
+                        <Calendar className="w-4 h-4" />
+                        Prazo: {new Date(work.deadline).toLocaleDateString('pt-BR')}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -138,16 +158,20 @@ export default function EmployeeDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {myTasks.map((task) => (
+              {tasks.length === 0 && <p className="text-sm text-slate-400">Nenhuma tarefa atribuída.</p>}
+              {tasks.filter(t => t.status !== 'completed').slice(0, 5).map((task) => (
                 <div key={task.id} className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg">
                   <AlertCircle className={`w-5 h-5 mt-0.5 ${task.priority === 'high' ? 'text-red-500' : task.priority === 'medium' ? 'text-amber-500' : 'text-blue-500'}`} />
                   <div className="flex-1">
                     <p className="font-medium">{task.title}</p>
+                    {task.work && <p className="text-xs text-slate-400">{task.work.code} — {task.work.title}</p>}
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="text-sm text-slate-500">
-                        <Calendar className="w-3 h-3 inline mr-1" />
-                        {new Date(task.deadline).toLocaleDateString('pt-BR')}
-                      </span>
+                      {task.dueDate && (
+                        <span className="text-sm text-slate-500">
+                          <Calendar className="w-3 h-3 inline mr-1" />
+                          {new Date(task.dueDate).toLocaleDateString('pt-BR')}
+                        </span>
+                      )}
                       <Badge variant={task.priority === 'high' ? 'destructive' : task.priority === 'medium' ? 'default' : 'secondary'} className="text-xs">
                         {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
                       </Badge>

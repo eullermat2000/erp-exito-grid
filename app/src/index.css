@@ -71,5 +71,63 @@
   }
   body {
     @apply bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ======= Responsive Mobile Utilities ======= */
+
+/* Prevent unwanted zoom on double-tap (iOS/Android) */
+@layer base {
+  input, textarea, select, button {
+    touch-action: manipulation;
+  }
+}
+
+/* Responsive typography */
+@layer utilities {
+  @media (max-width: 640px) {
+    .page-title {
+      font-size: 1.25rem !important;
+    }
+  }
+}
+
+/* Table horizontal scroll on mobile */
+@layer components {
+  .table-responsive {
+    @apply overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0;
+  }
+  .table-responsive table {
+    @apply min-w-[600px];
+  }
+}
+
+/* Responsive grid helpers */
+@layer utilities {
+  @media (max-width: 640px) {
+    .grid-responsive-cards {
+      grid-template-columns: 1fr !important;
+    }
+  }
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .grid-responsive-cards {
+      grid-template-columns: repeat(2, 1fr) !important;
+    }
+  }
+}
+
+/* Dialog/Sheet responsive sizing */
+@layer components {
+  @media (max-width: 640px) {
+    [role="dialog"] {
+      max-width: 95vw !important;
+      max-height: 90vh !important;
+      margin: auto !important;
+    }
+    [role="dialog"] > div {
+      max-height: 80vh;
+      overflow-y: auto;
+    }
   }
 }

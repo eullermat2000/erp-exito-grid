@@ -57,7 +57,7 @@ export default function Register() {
                     </div>
                 </div>
                 <div>
-                    <CardTitle className="text-2xl font-bold text-slate-900">Criar Conta</CardTitle>
+                    <CardTitle className="text-xl md:text-2xl font-bold text-slate-900">Criar Conta</CardTitle>
                     <CardDescription className="text-slate-500">
                         Cadastre-se no ElectraFlow
                     </CardDescription>

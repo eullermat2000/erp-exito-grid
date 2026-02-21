@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, UseGuards, Request, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
@@ -18,14 +18,14 @@ class RegisterDto {
 @ApiTags('Autenticação')
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService) { }
 
   @Post('login')
   @ApiOperation({ summary: 'Login do usuário' })
   async login(@Body() loginDto: LoginDto) {
     const user = await this.authService.validateUser(loginDto.email, loginDto.password);
     if (!user) {
-      throw new Error('Credenciais inválidas');
+      throw new UnauthorizedException('Credenciais inválidas');
     }
     return this.authService.login(user);
   }
@@ -48,4 +48,25 @@ export class AuthController {
   async getProfile(@Request() req) {
     return this.authService.getProfile(req.user.userId);
   }
+
+  // ═══ CLIENT AUTH ══════════════════════════════════════════════════════════
+
+  @Post('client-login')
+  @ApiOperation({ summary: 'Login do cliente (Portal)' })
+  async clientLogin(@Body() loginDto: LoginDto) {
+    const client = await this.authService.validateClient(loginDto.email, loginDto.password);
+    if (!client) {
+      throw new UnauthorizedException('Credenciais inválidas ou acesso ao portal desabilitado');
+    }
+    return this.authService.loginClient(client);
+  }
+
+  @Get('client-profile')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Perfil do cliente logado' })
+  async getClientProfile(@Request() req) {
+    return this.authService.getClientProfile(req.user.userId);
+  }
 }
+
