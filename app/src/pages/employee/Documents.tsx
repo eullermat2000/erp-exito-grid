@@ -65,10 +65,10 @@ export default function EmployeeDocuments() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
         <h1 className="text-xl md:text-2xl font-bold text-slate-900">Meus Documentos</h1>
-        <p className="text-slate-500">Documentos das suas obras</p>
+        <p className="text-sm text-slate-500">Documentos das suas obras</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

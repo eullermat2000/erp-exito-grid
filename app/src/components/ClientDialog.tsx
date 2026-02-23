@@ -26,7 +26,14 @@ import {
     Phone,
     Globe,
     ExternalLink,
-    Loader2
+    Loader2,
+    Copy,
+    Check,
+    KeyRound,
+    RefreshCw,
+    MessageCircle,
+    Eye,
+    EyeOff,
 } from 'lucide-react';
 import { api } from '@/api';
 import type { Client, ClientSegment, ClientType } from '@/types';
@@ -67,8 +74,16 @@ export function ClientDialog({
         notes: '',
     });
     const [isLookupLoading, setIsLookupLoading] = useState(false);
+    const [isCepLoading, setIsCepLoading] = useState(false);
 
     const [files, setFiles] = useState<{ file: File; type: string; issueDate?: string; expiryDate?: string }[]>([]);
+
+    // Password reveal state
+    const [generatedPassword, setGeneratedPassword] = useState<string | null>(null);
+    const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+    const [passwordCopied, setPasswordCopied] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [regenerating, setRegenerating] = useState(false);
 
     useEffect(() => {
         if (open) {
@@ -169,10 +184,42 @@ export function ClientDialog({
         if (formData.type === 'company' && formData.document.replace(/\D/g, '').length === 14) {
             const timer = setTimeout(() => {
                 handleCnpjLookup(formData.document);
-            }, 500); // Small debounce
+            }, 500);
             return () => clearTimeout(timer);
         }
     }, [formData.document, formData.type]);
+
+    // ═══ AUTO-PREENCHIMENTO CEP ═══
+    const handleCepLookup = async (cep: string) => {
+        const cleanCep = cep.replace(/\D/g, '');
+        if (cleanCep.length !== 8) return;
+
+        setIsCepLoading(true);
+        try {
+            const data = await api.fetchCepData(cleanCep);
+            setFormData(prev => ({
+                ...prev,
+                address: data.logradouro || prev.address,
+                neighborhood: data.bairro || prev.neighborhood,
+                city: data.localidade || prev.city,
+                state: data.uf || prev.state,
+            }));
+            toast.success('Endereço preenchido automaticamente');
+        } catch (error) {
+            console.error('Erro no lookup de CEP:', error);
+        } finally {
+            setIsCepLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (formData.zipCode.replace(/\D/g, '').length === 8) {
+            const timer = setTimeout(() => {
+                handleCepLookup(formData.zipCode);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [formData.zipCode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -185,6 +232,11 @@ export function ClientDialog({
                 toast.success('Cliente atualizado com sucesso');
             } else {
                 savedClient = await api.createClient(formData);
+                // Capture the generated portal password
+                if (savedClient.portalPassword) {
+                    setGeneratedPassword(savedClient.portalPassword);
+                    setShowPasswordDialog(true);
+                }
                 toast.success('Cliente cadastrado com sucesso');
             }
 
@@ -201,7 +253,10 @@ export function ClientDialog({
             }
 
             onSuccess();
-            onOpenChange(false);
+            // Only close the dialog if we're NOT showing a password
+            if (!savedClient.portalPassword) {
+                onOpenChange(false);
+            }
         } catch (error) {
             toast.error('Erro ao salvar cliente');
         } finally {
@@ -235,6 +290,50 @@ export function ClientDialog({
         } catch (err) {
             window.open(url, '_blank');
         }
+    };
+
+    const handleCopyPassword = async () => {
+        if (!generatedPassword) return;
+        try {
+            await navigator.clipboard.writeText(generatedPassword);
+            setPasswordCopied(true);
+            toast.success('Senha copiada!');
+            setTimeout(() => setPasswordCopied(false), 2000);
+        } catch {
+            toast.error('Erro ao copiar senha');
+        }
+    };
+
+    const handleShareWhatsApp = () => {
+        if (!generatedPassword || !formData.whatsapp) return;
+        const phone = formData.whatsapp.replace(/\D/g, '');
+        const msg = encodeURIComponent(
+            `Olá ${formData.name}!\n\nSeu acesso ao Portal do Cliente foi criado:\n\n📧 Login: ${formData.email}\n🔑 Senha: ${generatedPassword}\n\nAcesse em: ${window.location.origin}/client`
+        );
+        window.open(`https://wa.me/55${phone}?text=${msg}`, '_blank');
+    };
+
+    const handleRegeneratePassword = async () => {
+        if (!client) return;
+        setRegenerating(true);
+        try {
+            const result = await api.generateClientAccess(client.id);
+            setGeneratedPassword(result.portalPassword);
+            setShowPasswordDialog(true);
+            toast.success('Nova senha gerada!');
+        } catch {
+            toast.error('Erro ao gerar nova senha');
+        } finally {
+            setRegenerating(false);
+        }
+    };
+
+    const handleClosePasswordDialog = () => {
+        setShowPasswordDialog(false);
+        setGeneratedPassword(null);
+        setShowPassword(false);
+        setPasswordCopied(false);
+        onOpenChange(false);
     };
 
     return (
@@ -324,7 +423,24 @@ export function ClientDialog({
                             <MapPin className="w-4 h-4" />
                             <span>Endereço e Localização</span>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-xs font-bold text-slate-500 uppercase">CEP</Label>
+                                <div className="relative">
+                                    <Input
+                                        value={formData.zipCode}
+                                        onChange={e => setFormData({ ...formData, zipCode: e.target.value })}
+                                        className="bg-white border-slate-200 focus:ring-amber-500 h-10 pr-10"
+                                        placeholder="00000-000"
+                                        maxLength={9}
+                                    />
+                                    {isCepLoading && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                             <div className="md:col-span-2 space-y-2">
                                 <Label className="text-xs font-bold text-slate-500 uppercase">Logradouro</Label>
                                 <Input
@@ -523,6 +639,40 @@ export function ClientDialog({
                         )}
                     </div>
 
+                    {/* Portal access - Regenerate password (edit mode only) */}
+                    {client && (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 text-amber-600 font-bold text-sm uppercase tracking-wider border-b border-slate-200 pb-2">
+                                <KeyRound className="w-4 h-4" />
+                                <span>Acesso ao Portal</span>
+                            </div>
+                            <div className="flex items-center gap-4 p-4 bg-white rounded-xl border border-slate-200">
+                                <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                                    <KeyRound className="w-5 h-5" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold text-slate-700">Gerar nova senha de acesso</p>
+                                    <p className="text-xs text-slate-500">A senha atual será substituída por uma nova senha aleatória.</p>
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleRegeneratePassword}
+                                    disabled={regenerating}
+                                    className="shrink-0"
+                                >
+                                    {regenerating ? (
+                                        <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                                    ) : (
+                                        <RefreshCw className="w-4 h-4 mr-1" />
+                                    )}
+                                    Gerar Senha
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="sticky bottom-0 bg-slate-50 pt-4 pb-2 mt-8 flex justify-end gap-3 border-t border-slate-200">
                         <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={loading}>
                             Cancelar
@@ -533,6 +683,92 @@ export function ClientDialog({
                     </div>
                 </form>
             </DialogContent>
+
+            {/* Password Reveal Dialog */}
+            <Dialog open={showPasswordDialog} onOpenChange={(open) => { if (!open) handleClosePasswordDialog(); }}>
+                <DialogContent className="max-w-md p-0 border-none shadow-2xl overflow-hidden">
+                    <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 p-6 text-white">
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                                <KeyRound className="w-7 h-7" />
+                            </div>
+                            <div>
+                                <DialogTitle className="text-lg font-bold">Acesso ao Portal Criado</DialogTitle>
+                                <DialogDescription className="text-emerald-200 text-sm">
+                                    Envie estas credenciais para o cliente
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-6 space-y-4">
+                        <div className="bg-slate-50 rounded-xl p-4 space-y-3">
+                            <div>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">E-mail (Login)</p>
+                                <p className="text-sm font-medium text-slate-800">{formData.email}</p>
+                            </div>
+                            <div className="border-t border-slate-200 pt-3">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Senha Gerada</p>
+                                <div className="flex items-center gap-2">
+                                    <code className="flex-1 text-lg font-mono font-bold text-emerald-700 bg-emerald-50 px-3 py-2 rounded-lg border border-emerald-200 tracking-widest">
+                                        {showPassword ? generatedPassword : '••••••••'}
+                                    </code>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-9 w-9 shrink-0"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={`h-9 w-9 shrink-0 ${passwordCopied ? 'text-emerald-600' : ''}`}
+                                        onClick={handleCopyPassword}
+                                    >
+                                        {passwordCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            <p className="text-xs text-amber-700">
+                                ⚠️ <strong>Atenção:</strong> Esta senha não será exibida novamente. Copie e envie para o cliente agora.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-2">
+                            {formData.whatsapp && (
+                                <Button
+                                    className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                    onClick={handleShareWhatsApp}
+                                >
+                                    <MessageCircle className="w-4 h-4 mr-2" />
+                                    Enviar via WhatsApp
+                                </Button>
+                            )}
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={handleCopyPassword}
+                            >
+                                <Copy className="w-4 h-4 mr-2" />
+                                {passwordCopied ? 'Copiado!' : 'Copiar Senha'}
+                            </Button>
+                        </div>
+
+                        <Button
+                            className="w-full mt-2"
+                            variant="ghost"
+                            onClick={handleClosePasswordDialog}
+                        >
+                            Fechar
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </Dialog>
     );
 }

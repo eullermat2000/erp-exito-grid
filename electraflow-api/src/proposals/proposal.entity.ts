@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
 import { Opportunity } from '../opportunities/opportunity.entity';
 import { Client } from '../clients/client.entity';
+import { FiscalInvoice } from '../fiscal/fiscal.entity';
 
 export enum ProposalStatus {
   DRAFT = 'draft',
@@ -178,6 +179,18 @@ export class Proposal {
   @Column({ nullable: true, default: 'material' })
   brokerageCostApplyTo: string;         // 'material' | 'service' | 'both'
 
+  @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+  insuranceCostValue: number;           // Seguro
+
+  @Column({ nullable: true, default: 'visible' })
+  insuranceCostMode: string;            // 'visible' | 'embedded'
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  insuranceCostPercent: number;         // Percentual alternativo
+
+  @Column({ nullable: true, default: 'material' })
+  insuranceCostApplyTo: string;         // 'material' | 'service' | 'both'
+
   // ═══════════════════════════════════════════════════════════════
   // Conformidade Normativa
   // ═══════════════════════════════════════════════════════════════
@@ -221,6 +234,9 @@ export class Proposal {
 
   @OneToMany(() => ProposalItem, item => item.proposal, { cascade: true })
   items: ProposalItem[];
+
+  @OneToMany(() => FiscalInvoice, invoice => invoice.proposal)
+  fiscalInvoices: FiscalInvoice[];
 }
 
 @Entity('proposal_items')

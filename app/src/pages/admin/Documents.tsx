@@ -10,13 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+
 import {
   Upload,
   Search,
@@ -29,10 +23,10 @@ import {
   FolderPlus,
   ChevronRight,
   ChevronDown,
-  MoreHorizontal,
   Loader2,
   File,
-  Pencil,
+  Menu,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/api';
@@ -70,6 +64,7 @@ export default function AdminDocuments() {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [newFolderParentId, setNewFolderParentId] = useState<string>('');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -211,7 +206,10 @@ export default function AdminDocuments() {
               : 'hover:bg-slate-100 text-slate-600'
               }`}
             style={{ paddingLeft: `${8 + depth * 16}px` }}
-            onClick={() => setSelectedFolderId(isSelected ? null : folder.id)}
+            onClick={() => {
+              setSelectedFolderId(isSelected ? null : folder.id);
+              setMobileSidebarOpen(false);
+            }}
           >
             <button
               className="p-0.5 hover:bg-slate-200 rounded"
@@ -249,23 +247,33 @@ export default function AdminDocuments() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-start sm:items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
           <h1 className="text-xl md:text-2xl font-bold text-slate-900">Documentos</h1>
-          <p className="text-slate-500">Gerencie todos os documentos do sistema</p>
+          <p className="text-sm text-slate-500">Gerencie todos os documentos do sistema</p>
         </div>
-        <Button
-          className="bg-amber-500 hover:bg-amber-600 text-slate-900"
-          onClick={() => setShowUploadDialog(true)}
-        >
-          <Upload className="w-4 h-4 mr-2" />
-          Upload
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="md:hidden h-9 w-9"
+            onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+          >
+            <Menu className="w-4 h-4" />
+          </Button>
+          <Button
+            className="bg-amber-500 hover:bg-amber-600 text-slate-900"
+            onClick={() => setShowUploadDialog(true)}
+          >
+            <Upload className="w-4 h-4 mr-2" />
+            Upload
+          </Button>
+        </div>
       </div>
 
       {/* Category Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
         {Object.entries(categoryLabels).filter(([key]) => categoryCounts[key] > 0).map(([key, config]) => {
           const Icon = config.icon;
           return (
@@ -290,8 +298,8 @@ export default function AdminDocuments() {
       </div>
 
       {/* Search & Filters */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
             placeholder="Buscar documentos..."
@@ -301,7 +309,7 @@ export default function AdminDocuments() {
           />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px]">
             <FolderOpen className="w-4 h-4 mr-2" />
             <SelectValue placeholder="Tipo" />
           </SelectTrigger>
@@ -321,12 +329,38 @@ export default function AdminDocuments() {
           <span className="text-slate-500">Carregando documentos...</span>
         </div>
       ) : (
-        <div className="flex gap-6">
+        <div className="flex gap-6 relative">
+          {/* Mobile Sidebar Overlay */}
+          {mobileSidebarOpen && (
+            <div
+              className="fixed inset-0 bg-black/40 z-40 md:hidden"
+              onClick={() => setMobileSidebarOpen(false)}
+            />
+          )}
+
           {/* Folder Sidebar */}
-          <div className="w-64 shrink-0">
-            <Card>
+          <div className={`
+            fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-xl transform transition-transform duration-300 ease-in-out
+            md:relative md:inset-auto md:z-auto md:w-64 md:shadow-none md:transform-none md:transition-none md:bg-transparent
+            ${mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            shrink-0 overflow-y-auto
+          `}>
+            {/* Mobile close button */}
+            <div className="flex items-center justify-between p-3 md:hidden border-b">
+              <h3 className="font-semibold text-slate-700">Pastas</h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setMobileSidebarOpen(false)}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+
+            <Card className="border-0 shadow-none md:border md:shadow-sm">
               <CardContent className="p-3">
-                <div className="flex items-center justify-between mb-3">
+                <div className="hidden md:flex items-center justify-between mb-3">
                   <h3 className="font-semibold text-sm text-slate-700">Pastas</h3>
                   <Button
                     variant="ghost"
@@ -335,6 +369,19 @@ export default function AdminDocuments() {
                     onClick={() => setShowNewFolder(!showNewFolder)}
                   >
                     <FolderPlus className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                {/* Mobile new folder button */}
+                <div className="flex md:hidden items-center justify-end mb-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => setShowNewFolder(!showNewFolder)}
+                  >
+                    <FolderPlus className="w-4 h-4 mr-1" />
+                    Nova pasta
                   </Button>
                 </div>
 
@@ -380,7 +427,10 @@ export default function AdminDocuments() {
                     ? 'bg-amber-100 text-amber-800 font-medium'
                     : 'hover:bg-slate-100 text-slate-600'
                     }`}
-                  onClick={() => setSelectedFolderId(null)}
+                  onClick={() => {
+                    setSelectedFolderId(null);
+                    setMobileSidebarOpen(false);
+                  }}
                 >
                   <FileText className="w-4 h-4 text-slate-500" />
                   <span>Todos os documentos</span>
@@ -421,7 +471,7 @@ export default function AdminDocuments() {
                     </div>
 
                     {/* Document Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 ml-6 border-l-2 border-slate-100 pl-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 ml-3 md:ml-6 border-l-2 border-slate-100 pl-3 md:pl-5">
                       {groupedByDate[date].map((doc: any) => {
                         const cat = categoryLabels[doc.type] || categoryLabels.other;
                         const CatIcon = cat.icon;

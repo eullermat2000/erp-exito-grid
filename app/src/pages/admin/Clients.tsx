@@ -26,7 +26,10 @@ import {
   Eye,
   Edit2,
   Trash2,
-  ExternalLink
+  ExternalLink,
+  RefreshCw,
+  Copy,
+  KeyRound
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -40,6 +43,12 @@ import type { Client } from '@/types';
 import { ClientDialog } from '@/components/ClientDialog';
 import { ClientDetailViewer } from '@/components/ClientDetailViewer';
 import { toast } from 'sonner';
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 export default function AdminClients() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -49,6 +58,10 @@ export default function AdminClients() {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | undefined>();
   const [viewingClient, setViewingClient] = useState<Client | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResults, setSyncResults] = useState<{ synced: { name: string; email: string; portalPassword: string }[]; skipped: string[]; errors: string[] } | null>(null);
+  const [showSyncResults, setShowSyncResults] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const loadClients = async () => {
     try {
@@ -76,6 +89,35 @@ export default function AdminClients() {
       toast.error('Erro ao remover cliente');
     }
   }
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const result = await api.syncClientsToUsers();
+      setSyncResults(result);
+      setShowSyncResults(true);
+      if (result.synced.length > 0) {
+        toast.success(`${result.synced.length} cliente(s) sincronizado(s)!`);
+      } else {
+        toast.info('Todos os clientes já estão sincronizados.');
+      }
+    } catch (error) {
+      toast.error('Erro ao sincronizar clientes');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleCopyCredentials = async (email: string, password: string, index: number) => {
+    try {
+      await navigator.clipboard.writeText(`Login: ${email}\nSenha: ${password}`);
+      setCopiedIndex(index);
+      toast.success('Credenciais copiadas!');
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch {
+      toast.error('Erro ao copiar');
+    }
+  };
 
   const filteredClients = clients.filter((client) =>
     client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,16 +147,31 @@ export default function AdminClients() {
           </h1>
           <p className="text-slate-500">Gestão centralizada de informações e documentos.</p>
         </div>
-        <Button
-          className="bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-lg"
-          onClick={() => {
-            setSelectedClient(undefined);
-            setIsDialogOpen(true);
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Cliente
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="border-amber-300 text-amber-700 hover:bg-amber-50 font-bold"
+            onClick={handleSync}
+            disabled={syncing}
+          >
+            {syncing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="w-4 h-4 mr-2" />
+            )}
+            Sincronizar Usuários
+          </Button>
+          <Button
+            className="bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-lg"
+            onClick={() => {
+              setSelectedClient(undefined);
+              setIsDialogOpen(true);
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Cliente
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -304,6 +361,86 @@ export default function AdminClients() {
         onOpenChange={setIsViewerOpen}
         client={viewingClient}
       />
+
+      {/* Sync Results Dialog */}
+      <Dialog open={showSyncResults} onOpenChange={setShowSyncResults}>
+        <DialogContent className="max-w-lg p-0 border-none shadow-2xl overflow-hidden">
+          <div className="bg-gradient-to-br from-emerald-600 to-emerald-800 p-6 text-white">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                <KeyRound className="w-7 h-7" />
+              </div>
+              <div>
+                <DialogTitle className="text-lg font-bold">Sincronização Concluída</DialogTitle>
+                <DialogDescription className="text-emerald-200 text-sm">
+                  {syncResults?.synced.length || 0} cliente(s) sincronizado(s)
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+            {syncResults?.synced && syncResults.synced.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Credenciais Geradas</p>
+                <div className="space-y-3">
+                  {syncResults.synced.map((item, i) => (
+                    <div key={i} className="bg-slate-50 rounded-xl p-4 flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-700 truncate">{item.name}</p>
+                        <p className="text-xs text-slate-500">{item.email}</p>
+                        <code className="text-xs font-mono font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded mt-1 inline-block">
+                          {item.portalPassword}
+                        </code>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className={copiedIndex === i ? 'text-emerald-600' : ''}
+                        onClick={() => handleCopyCredentials(item.email, item.portalPassword, i)}
+                      >
+                        <Copy className="w-4 h-4 mr-1" />
+                        {copiedIndex === i ? 'Copiado!' : 'Copiar'}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {syncResults?.skipped && syncResults.skipped.length > 0 && (
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Ignorados (já sincronizados)</p>
+                <div className="text-xs text-slate-500 space-y-1">
+                  {syncResults.skipped.map((s, i) => (
+                    <p key={i}>• {s}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {syncResults?.synced.length === 0 && (
+              <div className="text-center py-4">
+                <p className="text-slate-500">Todos os clientes já possuem contas de usuário.</p>
+              </div>
+            )}
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+              <p className="text-xs text-amber-700">
+                ⚠️ <strong>Atenção:</strong> Estas senhas não serão exibidas novamente. Copie e envie para cada cliente agora.
+              </p>
+            </div>
+
+            <Button
+              className="w-full"
+              variant="ghost"
+              onClick={() => setShowSyncResults(false)}
+            >
+              Fechar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

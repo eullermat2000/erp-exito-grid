@@ -62,7 +62,7 @@ export default function Login() {
         </div>
         <div>
           <CardTitle className="text-xl md:text-2xl font-bold text-slate-900">
-            {isClient ? 'Portal do Cliente' : 'ElectraFlow'}
+            {isClient ? 'Portal do Cliente' : 'Exito System'}
           </CardTitle>
           <CardDescription className="text-slate-500">
             {isClient ? 'Acompanhe suas obras e solicitações' : 'Sistema ERP para Engenharia Elétrica'}

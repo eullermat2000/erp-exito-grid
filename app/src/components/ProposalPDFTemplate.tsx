@@ -24,12 +24,14 @@ export function ProposalPDFTemplate({ proposal }: ProposalPDFTemplateProps) {
     const logisticsCost = calcCost(proposal.logisticsCostValue, proposal.logisticsCostPercent, materialSubtotal);
     const adminCost = calcCost(proposal.adminCostValue, proposal.adminCostPercent, materialSubtotal + serviceSubtotal);
     const brokerageCost = calcCost(proposal.brokerageCostValue, proposal.brokerageCostPercent, materialSubtotal + serviceSubtotal);
+    const insuranceCost = calcCost(proposal.insuranceCostValue, proposal.insuranceCostPercent, materialSubtotal + serviceSubtotal);
 
     const showLogistics = proposal.logisticsCostMode !== 'embedded' && logisticsCost > 0;
     const showAdmin = proposal.adminCostMode !== 'embedded' && adminCost > 0;
     const showBrokerage = proposal.brokerageCostMode !== 'embedded' && brokerageCost > 0;
+    const showInsurance = proposal.insuranceCostMode !== 'embedded' && insuranceCost > 0;
 
-    const visibleCosts = (showLogistics ? logisticsCost : 0) + (showAdmin ? adminCost : 0) + (showBrokerage ? brokerageCost : 0);
+    const visibleCosts = (showLogistics ? logisticsCost : 0) + (showAdmin ? adminCost : 0) + (showBrokerage ? brokerageCost : 0) + (showInsurance ? insuranceCost : 0);
     const discount = Number(proposal.discount || 0);
     const grandTotal = materialSubtotal + serviceSubtotal + visibleCosts - discount;
 
@@ -272,8 +274,14 @@ export function ProposalPDFTemplate({ proposal }: ProposalPDFTemplateProps) {
                                     )}
                                     {showBrokerage && (
                                         <div style={s.summaryRow}>
-                                            <span>Corretagem / Seguro{proposal.brokerageCostPercent && Number(proposal.brokerageCostPercent) > 0 && <span style={s.costBadge}>{proposal.brokerageCostPercent}%</span>}</span>
+                                            <span>Corretagem{proposal.brokerageCostPercent && Number(proposal.brokerageCostPercent) > 0 && <span style={s.costBadge}>{proposal.brokerageCostPercent}%</span>}</span>
                                             <span style={{ fontWeight: 600 }}>R$ {fmt(brokerageCost)}</span>
+                                        </div>
+                                    )}
+                                    {showInsurance && (
+                                        <div style={s.summaryRow}>
+                                            <span>Seguro{proposal.insuranceCostPercent && Number(proposal.insuranceCostPercent) > 0 && <span style={s.costBadge}>{proposal.insuranceCostPercent}%</span>}</span>
+                                            <span style={{ fontWeight: 600 }}>R$ {fmt(insuranceCost)}</span>
                                         </div>
                                     )}
                                     {discount > 0 && (
@@ -344,8 +352,14 @@ export function ProposalPDFTemplate({ proposal }: ProposalPDFTemplateProps) {
                                     )}
                                     {showBrokerage && (
                                         <div style={s.summaryRow}>
-                                            <span>Corretagem / Seguro{proposal.brokerageCostPercent && Number(proposal.brokerageCostPercent) > 0 && <span style={s.costBadge}>{proposal.brokerageCostPercent}%</span>}</span>
+                                            <span>Corretagem{proposal.brokerageCostPercent && Number(proposal.brokerageCostPercent) > 0 && <span style={s.costBadge}>{proposal.brokerageCostPercent}%</span>}</span>
                                             <span style={{ fontWeight: 600 }}>R$ {fmt(brokerageCost)}</span>
+                                        </div>
+                                    )}
+                                    {showInsurance && (
+                                        <div style={s.summaryRow}>
+                                            <span>Seguro{proposal.insuranceCostPercent && Number(proposal.insuranceCostPercent) > 0 && <span style={s.costBadge}>{proposal.insuranceCostPercent}%</span>}</span>
+                                            <span style={{ fontWeight: 600 }}>R$ {fmt(insuranceCost)}</span>
                                         </div>
                                     )}
                                     {discount > 0 && (

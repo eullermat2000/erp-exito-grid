@@ -33,6 +33,9 @@ import {
   History,
   Menu,
   X,
+  MessageSquare,
+  Receipt,
+  Package,
 } from 'lucide-react';
 
 const navItems = [
@@ -47,11 +50,13 @@ const navItems = [
   { path: '/admin/users', label: 'Usuários', icon: Users, module: 'users', roles: ['admin'] },
   { path: '/admin/clients', label: 'Clientes', icon: UserCircle, module: 'clients', roles: ['admin', 'commercial'] },
   { path: '/admin/finance', label: 'Financeiro', icon: DollarSign, module: 'finance', roles: ['admin', 'finance'] },
+  { path: '/admin/fiscal', label: 'Fiscal', icon: Receipt, module: 'fiscal', roles: ['admin', 'finance'] },
   { path: '/admin/finance-simulator', label: 'Simulador Investimento', icon: Calculator, module: 'finance-simulator', roles: ['admin', 'commercial', 'finance'] },
-  { path: '/admin/catalog', label: 'Catálogo', icon: Zap, module: 'catalog', roles: ['admin', 'commercial'] },
+  { path: '/admin/catalog', label: 'Produtos & Estoque', icon: Package, module: 'catalog', roles: ['admin', 'commercial', 'engineer'] },
   { path: '/admin/suppliers', label: 'Fornecedores', icon: Truck, module: 'suppliers', roles: ['admin', 'commercial', 'engineer'] },
   { path: '/admin/quotations', label: 'Cotações', icon: FileText, module: 'quotations', roles: ['admin', 'commercial', 'engineer'] },
   { path: '/admin/price-history', label: 'Memorial Preços', icon: History, module: 'price-history', roles: ['admin', 'commercial', 'finance'] },
+  { path: '/admin/client-requests', label: 'Solicitações', icon: MessageSquare, module: 'client-requests', roles: ['admin', 'commercial'] },
   { path: '/admin/settings', label: 'Configurações', icon: Settings, module: 'settings', roles: ['admin'] },
 ];
 
@@ -96,12 +101,17 @@ export default function AdminLayout() {
         {/* Logo */}
         <div className="p-4 md:p-6 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Zap className="w-6 h-6 text-slate-900" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-lg">ElectraFlow</h1>
-              <p className="text-xs text-slate-400">ERP para Engenharia</p>
+            <div
+              onClick={() => navigate('/admin/dashboard')}
+              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1 min-w-0"
+            >
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Zap className="w-6 h-6 text-slate-900" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-bold text-lg">Exito System</h1>
+                <p className="text-xs text-slate-400">ERP para Engenharia</p>
+              </div>
             </div>
             {/* Close button mobile */}
             <button

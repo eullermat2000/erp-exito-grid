@@ -1,14 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { Client } from './client.entity';
 import { ClientDocument } from './client-document.entity';
 import { ClientRequest, RequestStatus } from './client-request.entity';
+import { RequestAttachment } from './request-attachment.entity';
 import { Work } from '../works/work.entity';
+import { User, UserRole, UserStatus } from '../users/user.entity';
 
 @Injectable()
 export class ClientsService {
+  private readonly logger = new Logger(ClientsService.name);
+
   constructor(
     @InjectRepository(Client)
     private clientRepository: Repository<Client>,
@@ -18,6 +22,10 @@ export class ClientsService {
     private requestRepository: Repository<ClientRequest>,
     @InjectRepository(Work)
     private workRepository: Repository<Work>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(RequestAttachment)
+    private attachmentRepository: Repository<RequestAttachment>,
   ) { }
 
   // ═══ CRUD ═════════════════════════════════════════════════════════════════
@@ -60,6 +68,37 @@ export class ClientsService {
     });
     const saved = await this.clientRepository.save(client);
 
+    // Auto-create a User record with role CLIENT
+    try {
+      const existingUser = await this.userRepository.findOne({ where: { email: saved.email } });
+      if (existingUser) {
+        // User with this email already exists — update role to client
+        existingUser.role = UserRole.CLIENT;
+        existingUser.password = hashedPassword;
+        existingUser.isActive = true;
+        existingUser.status = UserStatus.ACTIVE;
+        await this.userRepository.save(existingUser);
+        this.logger.log(`Usuário existente ${saved.email} atualizado para role CLIENT`);
+      } else {
+        // Create new user
+        const user = this.userRepository.create({
+          name: saved.name,
+          email: saved.email,
+          password: hashedPassword,
+          role: UserRole.CLIENT,
+          phone: saved.phone || null,
+          permissions: [],
+          status: UserStatus.ACTIVE,
+          isActive: true,
+        });
+        await this.userRepository.save(user);
+        this.logger.log(`Usuário CLIENT criado automaticamente para ${saved.email}`);
+      }
+    } catch (error) {
+      this.logger.error(`Erro ao criar usuário para cliente ${saved.email}: ${error.message}`);
+      // Don't block the client creation if user creation fails
+    }
+
     // Return with plain password so admin can share with client
     const { password: _, ...result } = saved;
     return { ...result, portalPassword: plainPassword };
@@ -74,6 +113,60 @@ export class ClientsService {
   async remove(id: string): Promise<void> {
     const client = await this.findOne(id);
     await this.clientRepository.remove(client);
+  }
+
+  // ═══ SYNC — Criar Users para clientes existentes ═══════════════════════
+
+  async syncExistingClientsToUsers(): Promise<{ synced: { name: string; email: string; portalPassword: string }[]; skipped: string[]; errors: string[] }> {
+    const allClients = await this.clientRepository.find();
+    const synced: { name: string; email: string; portalPassword: string }[] = [];
+    const skipped: string[] = [];
+    const errors: string[] = [];
+
+    for (const client of allClients) {
+      try {
+        if (!client.email) {
+          skipped.push(`${client.name} (sem email)`);
+          continue;
+        }
+
+        const existingUser = await this.userRepository.findOne({ where: { email: client.email } });
+        if (existingUser) {
+          skipped.push(`${client.name} (${client.email} - já tem User)`);
+          continue;
+        }
+
+        // Generate new password
+        const plainPassword = this.generateRandomPassword();
+        const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+        // Update client password
+        client.password = hashedPassword;
+        client.hasPortalAccess = true;
+        await this.clientRepository.save(client);
+
+        // Create User
+        const user = this.userRepository.create({
+          name: client.name,
+          email: client.email,
+          password: hashedPassword,
+          role: UserRole.CLIENT,
+          phone: client.phone || null,
+          permissions: [],
+          status: UserStatus.ACTIVE,
+          isActive: true,
+        });
+        await this.userRepository.save(user);
+
+        synced.push({ name: client.name, email: client.email, portalPassword: plainPassword });
+        this.logger.log(`Sincronizado: ${client.name} (${client.email})`);
+      } catch (error) {
+        errors.push(`${client.name}: ${error.message}`);
+        this.logger.error(`Erro ao sincronizar ${client.name}: ${error.message}`);
+      }
+    }
+
+    return { synced, skipped, errors };
   }
 
   // ═══ PORTAL ACCESS ════════════════════════════════════════════════════════
@@ -94,6 +187,19 @@ export class ClientsService {
     client.password = hashedPassword;
     client.hasPortalAccess = true;
     await this.clientRepository.save(client);
+
+    // Also update the corresponding User record
+    try {
+      const user = await this.userRepository.findOne({ where: { email: client.email } });
+      if (user) {
+        user.password = hashedPassword;
+        await this.userRepository.save(user);
+        this.logger.log(`Senha do usuário ${client.email} atualizada junto com o cliente`);
+      }
+    } catch (error) {
+      this.logger.error(`Erro ao atualizar senha do usuário ${client.email}: ${error.message}`);
+    }
+
     return { portalPassword: plainPassword };
   }
 
@@ -119,19 +225,70 @@ export class ClientsService {
   async getClientRequests(clientId: string): Promise<ClientRequest[]> {
     return this.requestRepository.find({
       where: { clientId },
-      relations: ['work'],
+      relations: ['work', 'attachments'],
       order: { createdAt: 'DESC' },
     });
   }
 
-  async createClientRequest(clientId: string, data: Partial<ClientRequest>): Promise<ClientRequest> {
+  async createClientRequest(
+    clientId: string,
+    data: Partial<ClientRequest>,
+    files?: Express.Multer.File[],
+  ): Promise<ClientRequest> {
     const request = this.requestRepository.create({
       ...data,
       clientId,
       status: RequestStatus.OPEN,
     });
     const saved = await this.requestRepository.save(request);
-    return Array.isArray(saved) ? saved[0] : saved;
+    const requestRecord = Array.isArray(saved) ? saved[0] : saved;
+
+    // Save attachments
+    if (files && files.length > 0) {
+      const attachments = files.map(file => this.attachmentRepository.create({
+        requestId: requestRecord.id,
+        fileName: file.filename,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        url: `/uploads/requests/${file.filename}`,
+      }));
+      await this.attachmentRepository.save(attachments);
+      requestRecord.attachments = attachments;
+    }
+
+    return requestRecord;
+  }
+
+  // ═══ ADMIN REQUEST MANAGEMENT ═══════════════════════════════════════════════
+
+  async getAllRequests(): Promise<ClientRequest[]> {
+    return this.requestRepository.find({
+      relations: ['client', 'work', 'attachments'],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async getRequestDetail(requestId: string): Promise<ClientRequest> {
+    const request = await this.requestRepository.findOne({
+      where: { id: requestId },
+      relations: ['client', 'work', 'attachments'],
+    });
+    if (!request) throw new NotFoundException('Solicitação não encontrada');
+    return request;
+  }
+
+  async respondToRequest(requestId: string, responseData: {
+    adminResponse: string;
+    status: RequestStatus;
+    respondedBy: string;
+  }): Promise<ClientRequest> {
+    const request = await this.getRequestDetail(requestId);
+    request.adminResponse = responseData.adminResponse;
+    request.status = responseData.status;
+    request.respondedBy = responseData.respondedBy;
+    request.respondedAt = new Date();
+    return this.requestRepository.save(request);
   }
 
   // ═══ DOCUMENTS ════════════════════════════════════════════════════════════

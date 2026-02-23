@@ -21,6 +21,7 @@ import { EmployeesModule } from './employees/employees.module';
 import { EmailModule } from './email/email.module';
 import { SupplyModule } from './supply/supply.module';
 import { ComplianceModule } from './compliance/compliance.module';
+import { FiscalModule } from './fiscal/fiscal.module';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { ComplianceModule } from './compliance/compliance.module';
     EmailModule,
     SupplyModule,
     ComplianceModule,
+    FiscalModule,
   ],
 })
 export class AppModule { }

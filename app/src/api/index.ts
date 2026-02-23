@@ -25,19 +25,44 @@ class ApiService {
       (error) => Promise.reject(error)
     );
 
+    let isRedirecting = false;
+
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
         if (error.response?.status === 401) {
-          localStorage.removeItem('electraflow_token');
-          localStorage.removeItem('electraflow_user');
-          window.location.href = '/login';
-          toast.error('Sessão expirada. Faça login novamente.');
+          // Only redirect if user was authenticated AND the 401 came from our own auth
+          // (not from an external API proxied through our backend like Nuvem Fiscal)
+          const hadToken = !!localStorage.getItem('electraflow_token');
+          const requestUrl = error.config?.url || '';
+          const isAuthEndpoint = requestUrl.includes('/auth/');
+          const isFiscalEndpoint = requestUrl.includes('/fiscal/');
+          const isCatalogEndpoint = requestUrl.includes('/catalog/');
+
+          // Don't redirect for fiscal/catalog endpoints — 401 there means
+          // external API auth failed (Nuvem Fiscal, BrasilAPI), not our JWT
+          if (hadToken && !isRedirecting && !isFiscalEndpoint && !isCatalogEndpoint) {
+            isRedirecting = true;
+            localStorage.removeItem('electraflow_token');
+            localStorage.removeItem('electraflow_user');
+            toast.error('Sessão expirada. Faça login novamente.');
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 500);
+          } else if (isAuthEndpoint && hadToken && !isRedirecting) {
+            // Auth endpoint 401 = token really expired
+            isRedirecting = true;
+            localStorage.removeItem('electraflow_token');
+            localStorage.removeItem('electraflow_user');
+            toast.error('Sessão expirada. Faça login novamente.');
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 500);
+          }
         } else if (error.response?.status === 403) {
           toast.error('Você não tem permissão para realizar esta ação.');
-        } else if (error.response?.status === 500) {
-          toast.error('Erro no servidor. Tente novamente mais tarde.');
         }
+        // Removed auto-toast for 500 — let individual catch blocks handle it
         return Promise.reject(error);
       }
     );
@@ -138,6 +163,13 @@ class ApiService {
     const cleanCnpj = cnpj.replace(/\D/g, '');
     const response = await axios.get(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
     return response.data;
+  }
+
+  async fetchCepData(cep: string) {
+    const cleanCep = cep.replace(/\D/g, '');
+    const response = await axios.get(`https://viacep.com.br/ws/${cleanCep}/json/`);
+    if (response.data.erro) throw new Error('CEP não encontrado');
+    return response.data; // { logradouro, bairro, localidade, uf, ibge, ... }
   }
 
   async deleteClient(id: string) {
@@ -932,8 +964,19 @@ class ApiService {
     return response.data;
   }
 
-  async createClientRequest(data: { type: string; subject: string; description: string; workId?: string; priority?: string }) {
-    const response = await this.client.post('/client-portal/requests', data);
+  async createClientRequest(data: { type: string; subject: string; description: string; workId?: string; priority?: string }, files?: File[]) {
+    const formData = new FormData();
+    formData.append('type', data.type);
+    formData.append('subject', data.subject);
+    formData.append('description', data.description);
+    if (data.workId) formData.append('workId', data.workId);
+    if (data.priority) formData.append('priority', data.priority);
+    if (files) {
+      files.forEach(file => formData.append('files', file));
+    }
+    const response = await this.client.post('/client-portal/requests', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response.data;
   }
 
@@ -944,6 +987,30 @@ class ApiService {
 
   async generateClientAccess(clientId: string) {
     const response = await this.client.post(`/clients/${clientId}/generate-access`);
+    return response.data;
+  }
+
+  async syncClientsToUsers() {
+    const response = await this.client.post('/clients/sync-users');
+    return response.data;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // ADMIN — Solicitações de Clientes
+  // ═══════════════════════════════════════════════════════════════
+
+  async getAllClientRequests() {
+    const response = await this.client.get('/clients/requests/all');
+    return response.data;
+  }
+
+  async getClientRequestDetail(id: string) {
+    const response = await this.client.get(`/clients/requests/${id}`);
+    return response.data;
+  }
+
+  async respondToClientRequest(id: string, data: { adminResponse: string; status: string }) {
+    const response = await this.client.put(`/clients/requests/${id}/respond`, data);
     return response.data;
   }
 
@@ -1143,6 +1210,201 @@ class ApiService {
 
   async createRetentionPolicy(data: any) {
     const response = await this.client.post('/compliance/retention-policies', data);
+    return response.data;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // FISCAL — Faturamento NF-e / NFS-e
+  // ═══════════════════════════════════════════════════════════════
+
+  async getFiscalConfig() {
+    const response = await this.client.get('/fiscal/config');
+    return response.data;
+  }
+
+  async updateFiscalConfig(data: any) {
+    const response = await this.client.put('/fiscal/config', data);
+    return response.data;
+  }
+
+  async uploadFiscalCertificate(file: File, password: string) {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('password', password);
+    const response = await this.client.post('/fiscal/config/certificate', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  }
+
+  async removeFiscalCertificate() {
+    const response = await this.client.delete('/fiscal/config/certificate');
+    return response.data;
+  }
+
+  async getFiscalInvoices(filters?: { type?: string; status?: string; proposalId?: string }) {
+    const response = await this.client.get('/fiscal/invoices', { params: filters });
+    return response.data;
+  }
+
+  async getFiscalInvoice(id: string) {
+    const response = await this.client.get(`/fiscal/invoices/${id}`);
+    return response.data;
+  }
+
+  async createFiscalInvoice(data: { proposalId: string; type: 'nfe' | 'nfse'; naturezaOperacao?: string; finalidadeNfe?: number; cfopCode?: string }) {
+    const response = await this.client.post('/fiscal/invoices', data);
+    return response.data;
+  }
+
+  async cancelFiscalInvoice(id: string, reason: string) {
+    const response = await this.client.post(`/fiscal/invoices/${id}/cancel`, { reason });
+    return response.data;
+  }
+
+  async getFiscalProposalPreview(proposalId: string) {
+    const response = await this.client.get(`/fiscal/proposal/${proposalId}/preview`);
+    return response.data;
+  }
+
+  async syncFiscalCompany() {
+    const response = await this.client.post('/fiscal/config/sync-company');
+    return response.data;
+  }
+
+  async syncFiscalServices() {
+    const response = await this.client.post('/fiscal/config/sync-services');
+    return response.data;
+  }
+
+  async testFiscalConnection() {
+    const response = await this.client.get('/fiscal/config/test-connection');
+    return response.data;
+  }
+
+  async checkFiscalInvoiceStatus(id: string) {
+    const response = await this.client.get(`/fiscal/invoices/${id}/status`);
+    return response.data;
+  }
+
+  async downloadFiscalInvoiceXml(id: string) {
+    const response = await this.client.get(`/fiscal/invoices/${id}/xml`, { responseType: 'blob' });
+    return response.data;
+  }
+
+  async downloadFiscalInvoicePdf(id: string) {
+    const response = await this.client.get(`/fiscal/invoices/${id}/pdf`, { responseType: 'blob' });
+    return response.data;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // CATÁLOGO — Produto individual
+  // ═══════════════════════════════════════════════════
+
+  async getCatalogItem(id: string) {
+    const response = await this.client.get(`/catalog/items/${id}`);
+    return response.data;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // NCM — Busca
+  // ═══════════════════════════════════════════════════
+
+  async searchNcm(query: string) {
+    const response = await this.client.get(`/catalog/ncm/search?q=${encodeURIComponent(query)}`);
+    return response.data;
+  }
+
+  async searchNcmPublic(query: string) {
+    const response = await this.client.get(`/catalog/ncm/public?q=${encodeURIComponent(query)}`);
+    return response.data;
+  }
+
+  async getCfopList(filters?: { type?: string; scope?: string; search?: string }) {
+    const response = await this.client.get('/catalog/cfop', { params: filters });
+    return response.data;
+  }
+
+  async getNaturezasOperacao() {
+    const response = await this.client.get('/fiscal/naturezas');
+    return response.data;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // ESTOQUE
+  // ═══════════════════════════════════════════════════
+
+  async getStockSummary() {
+    const response = await this.client.get('/catalog/stock/summary');
+    return response.data;
+  }
+
+  async createStockMovement(data: any) {
+    const response = await this.client.post('/catalog/stock/movements', data);
+    return response.data;
+  }
+
+  async getStockMovements(itemId: string) {
+    const response = await this.client.get(`/catalog/items/${itemId}/stock-movements`);
+    return response.data;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // FORNECEDORES DO PRODUTO
+  // ═══════════════════════════════════════════════════
+
+  async getProductSuppliers(itemId: string) {
+    const response = await this.client.get(`/catalog/items/${itemId}/suppliers`);
+    return response.data;
+  }
+
+  async linkProductSupplier(itemId: string, data: any) {
+    const response = await this.client.post(`/catalog/items/${itemId}/suppliers`, data);
+    return response.data;
+  }
+
+  async unlinkProductSupplier(itemId: string, supplierId: string) {
+    const response = await this.client.delete(`/catalog/items/${itemId}/suppliers/${supplierId}`);
+    return response.data;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // REGRAS FISCAIS
+  // ═══════════════════════════════════════════════════
+
+  async getFiscalRules() {
+    const response = await this.client.get('/catalog/fiscal-rules');
+    return response.data;
+  }
+
+  async createFiscalRule(data: any) {
+    const response = await this.client.post('/catalog/fiscal-rules', data);
+    return response.data;
+  }
+
+  async updateFiscalRule(id: string, data: any) {
+    const response = await this.client.put(`/catalog/fiscal-rules/${id}`, data);
+    return response.data;
+  }
+
+  async deleteFiscalRule(id: string) {
+    const response = await this.client.delete(`/catalog/fiscal-rules/${id}`);
+    return response.data;
+  }
+
+  // ═══════════════════════════════════════════════════
+  // CNPJ e CEP — Consulta pública
+  // ═══════════════════════════════════════════════════
+
+  async lookupCnpj(cnpj: string) {
+    const clean = cnpj.replace(/\D/g, '');
+    const response = await this.client.get(`/catalog/cnpj/${clean}`);
+    return response.data;
+  }
+
+  async lookupCep(cep: string) {
+    const clean = cep.replace(/\D/g, '');
+    const response = await this.client.get(`/catalog/cep/${clean}`);
     return response.data;
   }
 }

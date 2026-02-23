@@ -7,8 +7,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { api } from '@/api';
-import { Truck, Plus, Search, MoreVertical, Star, Phone, Mail, MapPin, Trash2, Edit, UserPlus } from 'lucide-react';
+import { Truck, Plus, Search, MoreVertical, Star, Phone, Mail, MapPin, Trash2, Edit, UserPlus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const segmentLabels: Record<string, string> = { material: 'Material', service: 'Serviço', both: 'Ambos' };
 const statusConfig: Record<string, { label: string; color: string }> = {
@@ -35,6 +36,8 @@ export default function Suppliers() {
     const [contactForm, setContactForm] = useState({ name: '', email: '', phone: '', role: '', isPrimary: false });
     const [selectedSupplier, setSelectedSupplier] = useState<any>(null);
     const [saving, setSaving] = useState(false);
+    const [cnpjLoading, setCnpjLoading] = useState(false);
+    const [cepLoading, setCepLoading] = useState(false);
 
     const load = async () => {
         try {
@@ -46,6 +49,55 @@ export default function Suppliers() {
     };
 
     useEffect(() => { load(); }, [filterSegment]);
+
+    // ═══ AUTO-PREENCHIMENTO CNPJ ═══
+    useEffect(() => {
+        const clean = form.cnpj.replace(/\D/g, '');
+        if (clean.length === 14) {
+            const timer = setTimeout(async () => {
+                setCnpjLoading(true);
+                try {
+                    const data = await api.fetchCnpjData(clean);
+                    setForm(p => ({
+                        ...p,
+                        name: data.razao_social || p.name,
+                        tradeName: data.nome_fantasia || p.tradeName,
+                        address: data.logradouro ? `${data.logradouro}, ${data.numero || 'S/N'}` : p.address,
+                        city: data.municipio || p.city,
+                        state: data.uf || p.state,
+                        zipCode: data.cep || p.zipCode,
+                    }));
+                    toast.success('Dados do fornecedor preenchidos pelo CNPJ');
+                } catch {
+                    // Silently fail
+                } finally { setCnpjLoading(false); }
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [form.cnpj]);
+
+    // ═══ AUTO-PREENCHIMENTO CEP ═══
+    useEffect(() => {
+        const clean = form.zipCode.replace(/\D/g, '');
+        if (clean.length === 8) {
+            const timer = setTimeout(async () => {
+                setCepLoading(true);
+                try {
+                    const data = await api.fetchCepData(clean);
+                    setForm(p => ({
+                        ...p,
+                        address: data.logradouro || p.address,
+                        city: data.localidade || p.city,
+                        state: data.uf || p.state,
+                    }));
+                    toast.success('Endereço preenchido pelo CEP');
+                } catch {
+                    // Silently fail
+                } finally { setCepLoading(false); }
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [form.zipCode]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -212,7 +264,17 @@ export default function Suppliers() {
                             <div><label className="text-sm font-medium">Nome Fantasia</label><Input value={form.tradeName} onChange={e => setForm(p => ({ ...p, tradeName: e.target.value }))} /></div>
                         </div>
                         <div className="grid grid-cols-3 gap-4">
-                            <div><label className="text-sm font-medium">CNPJ</label><Input value={form.cnpj} onChange={e => setForm(p => ({ ...p, cnpj: e.target.value }))} /></div>
+                            <div>
+                                <label className="text-sm font-medium">CNPJ</label>
+                                <div className="relative">
+                                    <Input value={form.cnpj} onChange={e => setForm(p => ({ ...p, cnpj: e.target.value }))} />
+                                    {cnpjLoading && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                             <div><label className="text-sm font-medium">E-mail</label><Input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))} /></div>
                             <div><label className="text-sm font-medium">Telefone</label><Input value={form.phone} onChange={e => setForm(p => ({ ...p, phone: e.target.value }))} /></div>
                         </div>
@@ -231,19 +293,40 @@ export default function Suppliers() {
                             </div>
                         </div>
                         <div className="grid grid-cols-4 gap-4">
+                            <div>
+                                <label className="text-sm font-medium">CEP</label>
+                                <div className="relative">
+                                    <Input value={form.zipCode} onChange={e => setForm(p => ({ ...p, zipCode: e.target.value }))} />
+                                    {cepLoading && (
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                            <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                             <div className="col-span-2"><label className="text-sm font-medium">Endereço</label><Input value={form.address} onChange={e => setForm(p => ({ ...p, address: e.target.value }))} /></div>
                             <div><label className="text-sm font-medium">Cidade</label><Input value={form.city} onChange={e => setForm(p => ({ ...p, city: e.target.value }))} /></div>
-                            <div><label className="text-sm font-medium">UF</label><Input value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value }))} maxLength={2} /></div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div><label className="text-sm font-medium">CEP</label><Input value={form.zipCode} onChange={e => setForm(p => ({ ...p, zipCode: e.target.value }))} /></div>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div><label className="text-sm font-medium">UF</label><Input value={form.state} onChange={e => setForm(p => ({ ...p, state: e.target.value }))} maxLength={2} /></div>
                             <div><label className="text-sm font-medium">Condições de Pagamento</label><Input value={form.paymentTerms} onChange={e => setForm(p => ({ ...p, paymentTerms: e.target.value }))} placeholder="Ex: 30/60/90 dias" /></div>
+                            <div>
+                                <label className="text-sm font-medium">Status</label>
+                                <Select value={form.status} onValueChange={v => setForm(p => ({ ...p, status: v }))}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="active">Ativo</SelectItem>
+                                        <SelectItem value="inactive">Inativo</SelectItem>
+                                        <SelectItem value="blocked">Bloqueado</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         <div>
                             <label className="text-sm font-medium">Avaliação</label>
                             <div className="flex gap-1 mt-1">
                                 {[1, 2, 3, 4, 5].map(i => (
-                                    <button key={i} onClick={() => setForm(p => ({ ...p, rating: i }))}>
+                                    <button key={i} type="button" onClick={() => setForm(p => ({ ...p, rating: i }))}>
                                         <Star className={cn('w-6 h-6 cursor-pointer', i <= form.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-300')} />
                                     </button>
                                 ))}

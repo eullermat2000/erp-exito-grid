@@ -66,12 +66,17 @@ export default function ClientLayout() {
         {/* Logo */}
         <div className="p-4 md:p-6 border-b border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-lg">ElectraFlow</h1>
-              <p className="text-xs text-slate-400">Portal do Cliente</p>
+            <div
+              onClick={() => navigate('/client/dashboard')}
+              className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1 min-w-0"
+            >
+              <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Zap className="w-6 h-6 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="font-bold text-lg">Exito System</h1>
+                <p className="text-xs text-slate-400">Portal do Cliente</p>
+              </div>
             </div>
             <button
               onClick={closeSidebar}

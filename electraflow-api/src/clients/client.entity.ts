@@ -125,6 +125,9 @@ export class Client {
   @Column({ nullable: true })
   stateRegistration: string;
 
+  @Column({ nullable: true })
+  ibgeCode: string;                // Código IBGE do município (7 dígitos)
+
   @OneToMany('ClientDocument', 'client')
   documents: any[];
 

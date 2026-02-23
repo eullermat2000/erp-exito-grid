@@ -123,6 +123,10 @@ export default function NewProposalDialog({
         brokerageCostMode: 'visible',
         brokerageCostPercent: '',
         brokerageCostApplyTo: 'material',
+        insuranceCostValue: '',
+        insuranceCostMode: 'visible',
+        insuranceCostPercent: '',
+        insuranceCostApplyTo: 'material',
         complianceText: '',
         // Visibilidade dos itens
         itemVisibilityMode: 'detailed',
@@ -174,6 +178,10 @@ export default function NewProposalDialog({
                     brokerageCostMode: initialData.brokerageCostMode || 'visible',
                     brokerageCostPercent: String(initialData.brokerageCostPercent || ''),
                     brokerageCostApplyTo: initialData.brokerageCostApplyTo || 'material',
+                    insuranceCostValue: String(initialData.insuranceCostValue || ''),
+                    insuranceCostMode: initialData.insuranceCostMode || 'visible',
+                    insuranceCostPercent: String(initialData.insuranceCostPercent || ''),
+                    insuranceCostApplyTo: initialData.insuranceCostApplyTo || 'material',
                     complianceText: initialData.complianceText || '',
                     itemVisibilityMode: initialData.itemVisibilityMode || 'detailed',
                     materialSummaryText: initialData.materialSummaryText || '',
@@ -306,6 +314,10 @@ export default function NewProposalDialog({
             brokerageCostMode: 'visible',
             brokerageCostPercent: '',
             brokerageCostApplyTo: 'material',
+            insuranceCostValue: '',
+            insuranceCostMode: 'visible',
+            insuranceCostPercent: '',
+            insuranceCostApplyTo: 'material',
             complianceText: '',
             itemVisibilityMode: 'detailed',
             materialSummaryText: '',
@@ -1127,9 +1139,9 @@ export default function NewProposalDialog({
                             </div>
                         </div>
 
-                        {/* Corretagem / Seguro */}
+                        {/* Corretagem */}
                         <div className="border rounded-lg p-4 space-y-3">
-                            <p className="text-sm font-semibold text-slate-700">Corretagem / Seguro</p>
+                            <p className="text-sm font-semibold text-slate-700">Corretagem</p>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 <div className="space-y-1">
                                     <Label className="text-xs">Valor (R$)</Label>
@@ -1154,6 +1166,44 @@ export default function NewProposalDialog({
                                 <div className="space-y-1">
                                     <Label className="text-xs">Embutir em</Label>
                                     <Select value={formData.brokerageCostApplyTo} onValueChange={(v) => setFormData({ ...formData, brokerageCostApplyTo: v })}>
+                                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="material">Material</SelectItem>
+                                            <SelectItem value="service">Serviço</SelectItem>
+                                            <SelectItem value="both">Ambos</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Seguro */}
+                        <div className="border rounded-lg p-4 space-y-3">
+                            <p className="text-sm font-semibold text-slate-700">Seguro</p>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="space-y-1">
+                                    <Label className="text-xs">Valor (R$)</Label>
+                                    <Input type="number" step="0.01" placeholder="0,00" value={formData.insuranceCostValue}
+                                        onChange={(e) => setFormData({ ...formData, insuranceCostValue: e.target.value })} className="h-8 text-sm" />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs">Ou % sobre base</Label>
+                                    <Input type="number" step="0.01" placeholder="Ex: 2" value={formData.insuranceCostPercent}
+                                        onChange={(e) => setFormData({ ...formData, insuranceCostPercent: e.target.value })} className="h-8 text-sm" />
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs">Exibição</Label>
+                                    <Select value={formData.insuranceCostMode} onValueChange={(v) => setFormData({ ...formData, insuranceCostMode: v })}>
+                                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="visible">Visível ao cliente</SelectItem>
+                                            <SelectItem value="embedded">Embutir no preço</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1">
+                                    <Label className="text-xs">Embutir em</Label>
+                                    <Select value={formData.insuranceCostApplyTo} onValueChange={(v) => setFormData({ ...formData, insuranceCostApplyTo: v })}>
                                         <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="material">Material</SelectItem>

@@ -32,6 +32,8 @@ import AdminSuppliers from './pages/admin/Suppliers';
 import AdminQuotations from './pages/admin/Quotations';
 import AdminPriceHistory from './pages/admin/PriceHistory';
 import AdminEmployeeCompliance from './pages/admin/EmployeeCompliance';
+import AdminClientRequests from './pages/admin/ClientRequests';
+import AdminFiscal from './pages/admin/Fiscal';
 
 // Employee Pages
 import EmployeeDashboard from './pages/employee/Dashboard';
@@ -86,6 +88,8 @@ function App() {
               <Route path="/admin/suppliers" element={<AdminSuppliers />} />
               <Route path="/admin/quotations" element={<AdminQuotations />} />
               <Route path="/admin/price-history" element={<AdminPriceHistory />} />
+              <Route path="/admin/client-requests" element={<AdminClientRequests />} />
+              <Route path="/admin/fiscal" element={<AdminFiscal />} />
 
               {/* Restricted Admin-only routes */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>

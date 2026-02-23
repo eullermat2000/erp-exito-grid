@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,9 +14,18 @@ import {
     Clock,
     XCircle,
     X,
+    Upload,
+    FileText,
+    Image as ImageIcon,
+    Film,
+    Trash2,
+    Download,
+    Paperclip,
 } from 'lucide-react';
 import { api } from '@/api';
 import { toast } from 'sonner';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
     open: { label: 'Aberta', color: 'bg-blue-100 text-blue-700', icon: AlertCircle },
@@ -39,12 +48,27 @@ const priorityLabels: Record<string, { label: string; color: string }> = {
     high: { label: 'Alta', color: 'bg-red-100 text-red-700' },
 };
 
+function getFileIcon(mimeType: string) {
+    if (mimeType?.startsWith('image/')) return <ImageIcon className="w-5 h-5 text-blue-500" />;
+    if (mimeType?.startsWith('video/')) return <Film className="w-5 h-5 text-purple-500" />;
+    return <FileText className="w-5 h-5 text-amber-500" />;
+}
+
+function formatFileSize(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function ClientRequests() {
     const [requests, setRequests] = useState<any[]>([]);
     const [works, setWorks] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [showDialog, setShowDialog] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+    const [dragActive, setDragActive] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [form, setForm] = useState({
         type: 'information',
         subject: '',
@@ -70,6 +94,29 @@ export default function ClientRequests() {
 
     useEffect(() => { loadData(); }, []);
 
+    const handleFiles = (files: FileList | File[]) => {
+        const newFiles = Array.from(files);
+        setSelectedFiles(prev => [...prev, ...newFiles]);
+    };
+
+    const removeFile = (index: number) => {
+        setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleDrag = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+        else if (e.type === 'dragleave') setDragActive(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+        if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
@@ -80,10 +127,11 @@ export default function ClientRequests() {
                 description: form.description,
                 workId: form.workId || undefined,
                 priority: form.priority,
-            });
+            }, selectedFiles.length > 0 ? selectedFiles : undefined);
             toast.success('Solicitação criada com sucesso!');
             setShowDialog(false);
             setForm({ type: 'information', subject: '', description: '', workId: '', priority: 'medium' });
+            setSelectedFiles([]);
             setIsLoading(true);
             await loadData();
         } catch (err) {
@@ -174,13 +222,13 @@ export default function ClientRequests() {
                             <Card key={req.id} className="hover:shadow-md transition-shadow">
                                 <CardContent className="p-6">
                                     <div className="flex items-start justify-between">
-                                        <div className="flex items-start gap-4">
-                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${status.color}`}>
+                                        <div className="flex items-start gap-4 flex-1 min-w-0">
+                                            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${status.color}`}>
                                                 <StatusIcon className="w-5 h-5" />
                                             </div>
-                                            <div>
+                                            <div className="flex-1 min-w-0">
                                                 <h3 className="font-semibold text-lg">{req.subject}</h3>
-                                                <div className="flex items-center gap-2 mt-1">
+                                                <div className="flex flex-wrap items-center gap-2 mt-1">
                                                     <Badge variant="outline">{typeLabels[req.type] || req.type}</Badge>
                                                     <Badge className={priorityLabels[req.priority]?.color || 'bg-slate-100'}>
                                                         {priorityLabels[req.priority]?.label || req.priority}
@@ -191,6 +239,39 @@ export default function ClientRequests() {
                                                 {req.work && (
                                                     <p className="text-sm text-slate-400 mt-2">📋 Obra: {req.work.code} — {req.work.title}</p>
                                                 )}
+
+                                                {/* Attachments */}
+                                                {req.attachments && req.attachments.length > 0 && (
+                                                    <div className="mt-4">
+                                                        <p className="text-sm font-medium text-slate-600 mb-2 flex items-center gap-1">
+                                                            <Paperclip className="w-4 h-4" /> {req.attachments.length} anexo(s)
+                                                        </p>
+                                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                                            {req.attachments.map((att: any) => (
+                                                                <a
+                                                                    key={att.id}
+                                                                    href={`${API_URL}${att.url}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="flex items-center gap-2 p-2 bg-slate-50 rounded-lg border hover:bg-slate-100 transition-colors text-sm"
+                                                                >
+                                                                    {att.mimeType?.startsWith('image/') ? (
+                                                                        <img
+                                                                            src={`${API_URL}${att.url}`}
+                                                                            alt={att.originalName}
+                                                                            className="w-10 h-10 object-cover rounded"
+                                                                        />
+                                                                    ) : (
+                                                                        getFileIcon(att.mimeType)
+                                                                    )}
+                                                                    <span className="truncate flex-1 text-xs">{att.originalName}</span>
+                                                                    <Download className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 <p className="text-xs text-slate-400 mt-2">
                                                     Criada em {new Date(req.createdAt).toLocaleDateString('pt-BR')}
                                                 </p>
@@ -219,10 +300,10 @@ export default function ClientRequests() {
             {/* Dialog: Nova Solicitação */}
             {showDialog && (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-                    <Card className="w-full max-w-lg">
+                    <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
                         <CardHeader className="flex flex-row items-center justify-between">
                             <CardTitle>Nova Solicitação</CardTitle>
-                            <Button variant="ghost" size="icon" onClick={() => setShowDialog(false)}>
+                            <Button variant="ghost" size="icon" onClick={() => { setShowDialog(false); setSelectedFiles([]); }}>
                                 <X className="w-4 h-4" />
                             </Button>
                         </CardHeader>
@@ -293,8 +374,80 @@ export default function ClientRequests() {
                                     />
                                 </div>
 
+                                {/* File Upload Zone */}
+                                <div className="space-y-2">
+                                    <Label className="flex items-center gap-1">
+                                        <Paperclip className="w-4 h-4" /> Anexos (opcional)
+                                    </Label>
+                                    <div
+                                        className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${dragActive
+                                                ? 'border-emerald-400 bg-emerald-50'
+                                                : 'border-slate-300 hover:border-emerald-400 hover:bg-slate-50'
+                                            }`}
+                                        onDragEnter={handleDrag}
+                                        onDragLeave={handleDrag}
+                                        onDragOver={handleDrag}
+                                        onDrop={handleDrop}
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
+                                        <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                                        <p className="text-sm text-slate-600">
+                                            Arraste arquivos aqui ou <span className="text-emerald-600 font-medium">clique para selecionar</span>
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            Imagens, vídeos e documentos (máx. 10 arquivos)
+                                        </p>
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            multiple
+                                            className="hidden"
+                                            accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx"
+                                            onChange={(e) => { if (e.target.files) handleFiles(e.target.files); e.target.value = ''; }}
+                                        />
+                                    </div>
+
+                                    {/* Selected Files Preview */}
+                                    {selectedFiles.length > 0 && (
+                                        <div className="space-y-2 mt-2">
+                                            {selectedFiles.map((file, index) => (
+                                                <div key={index} className="flex items-center gap-3 p-2 bg-slate-50 rounded-lg border">
+                                                    {file.type.startsWith('image/') ? (
+                                                        <img
+                                                            src={URL.createObjectURL(file)}
+                                                            alt={file.name}
+                                                            className="w-10 h-10 object-cover rounded"
+                                                        />
+                                                    ) : file.type.startsWith('video/') ? (
+                                                        <div className="w-10 h-10 bg-purple-100 rounded flex items-center justify-center">
+                                                            <Film className="w-5 h-5 text-purple-500" />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="w-10 h-10 bg-amber-100 rounded flex items-center justify-center">
+                                                            <FileText className="w-5 h-5 text-amber-500" />
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-sm truncate">{file.name}</p>
+                                                        <p className="text-xs text-slate-400">{formatFileSize(file.size)}</p>
+                                                    </div>
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 text-red-400 hover:text-red-600"
+                                                        onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
                                 <div className="flex gap-2">
-                                    <Button type="button" variant="outline" className="flex-1" onClick={() => setShowDialog(false)}>
+                                    <Button type="button" variant="outline" className="flex-1" onClick={() => { setShowDialog(false); setSelectedFiles([]); }}>
                                         Cancelar
                                     </Button>
                                     <Button type="submit" className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white" disabled={submitting}>

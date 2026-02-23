@@ -1,10 +1,22 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ClientsService } from './clients.service';
 import { Client } from './client.entity';
 import { ClientDocument } from './client-document.entity';
-import { ClientRequest } from './client-request.entity';
+import { ClientRequest, RequestStatus } from './client-request.entity';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { v4 as uuid } from 'uuid';
+
+const requestUploadStorage = diskStorage({
+  destination: './uploads/requests',
+  filename: (_req, file, cb) => {
+    const uniqueName = `${uuid()}${extname(file.originalname)}`;
+    cb(null, uniqueName);
+  },
+});
 
 @ApiTags('Clientes')
 @Controller('clients')
@@ -48,6 +60,42 @@ export class ClientsController {
   async generatePortalAccess(@Param('id') id: string) {
     return this.clientsService.generatePortalAccess(id);
   }
+
+  @Post('sync-users')
+  @ApiOperation({ summary: 'Sincronizar clientes existentes — cria Users para quem ainda não tem' })
+  async syncClientsToUsers() {
+    return this.clientsService.syncExistingClientsToUsers();
+  }
+
+  // ═══ ADMIN REQUEST MANAGEMENT ═══════════════════════════════════════════════
+
+  @Get('requests/all')
+  @ApiOperation({ summary: 'Listar todas as solicitações de clientes (admin)' })
+  async getAllRequests() {
+    return this.clientsService.getAllRequests();
+  }
+
+  @Get('requests/:id')
+  @ApiOperation({ summary: 'Detalhe de solicitação (admin)' })
+  async getRequestDetail(@Param('id') id: string) {
+    return this.clientsService.getRequestDetail(id);
+  }
+
+  @Put('requests/:id/respond')
+  @ApiOperation({ summary: 'Responder solicitação do cliente (admin)' })
+  async respondToRequest(
+    @Param('id') id: string,
+    @Request() req,
+    @Body() body: { adminResponse: string; status: RequestStatus },
+  ) {
+    return this.clientsService.respondToRequest(id, {
+      adminResponse: body.adminResponse,
+      status: body.status,
+      respondedBy: req.user.name || req.user.email || req.user.userId,
+    });
+  }
+
+  // ═══ DOCUMENTS ═════════════════════════════════════════════════════════════
 
   @Post(':id/documents')
   @ApiOperation({ summary: 'Adicionar documento ao cliente' })
@@ -96,9 +144,14 @@ export class ClientPortalController {
   }
 
   @Post('requests')
-  @ApiOperation({ summary: 'Criar nova solicitação' })
-  async createRequest(@Request() req, @Body() data: Partial<ClientRequest>) {
-    return this.clientsService.createClientRequest(req.user.userId, data);
+  @ApiOperation({ summary: 'Criar nova solicitação com anexos' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FilesInterceptor('files', 10, { storage: requestUploadStorage }))
+  async createRequest(
+    @Request() req,
+    @Body() data: Partial<ClientRequest>,
+    @UploadedFiles() files?: Express.Multer.File[],
+  ) {
+    return this.clientsService.createClientRequest(req.user.userId, data, files);
   }
 }
-

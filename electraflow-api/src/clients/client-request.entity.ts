@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { Client } from './client.entity';
 import { Work } from '../works/work.entity';
+import { RequestAttachment } from './request-attachment.entity';
 
 export enum RequestType {
     INFORMATION = 'information',
@@ -65,6 +66,9 @@ export class ClientRequest {
 
     @Column({ nullable: true })
     respondedBy: string;
+
+    @OneToMany(() => RequestAttachment, (attachment) => attachment.request, { cascade: true, eager: true })
+    attachments: RequestAttachment[];
 
     @CreateDateColumn()
     createdAt: Date;
