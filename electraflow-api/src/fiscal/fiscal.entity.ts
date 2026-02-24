@@ -196,6 +196,35 @@ export enum FinalidadeNFe {
     DEVOLUCAO = 4,        // 4 - Devolução de mercadoria
 }
 
+// ═══ Interfaces para emissão de NF ═══
+
+export interface ClientData {
+    name: string;
+    document: string;        // CPF ou CNPJ
+    address?: string;
+    number?: string;         // Número do endereço
+    complement?: string;     // Complemento
+    neighborhood?: string;   // Bairro
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    ibgeCode?: string;       // Código IBGE do município
+    email?: string;
+    phone?: string;
+}
+
+export interface InvoiceItemData {
+    description: string;
+    unit?: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    ncm?: string;
+    cfopInterno?: string;
+    serviceType?: string;
+    origem?: number;
+}
+
 @Entity('fiscal_invoices')
 export class FiscalInvoice {
     @PrimaryGeneratedColumn('uuid')
@@ -280,6 +309,31 @@ export class FiscalInvoice {
     // CFOP principal da operação
     @Column({ nullable: true })
     cfopCode: string;
+
+    // ═══ EMISSÃO PARCIAL / EDIÇÃO DE VALOR ═══
+
+    // Valor original calculado da proposta (para auditoria)
+    @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+    originalValue: number;
+
+    // Valor customizado pelo usuário (null = usar valor original)
+    @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
+    customValue: number;
+
+    // Controle de parcelas
+    @Column({ type: 'int', nullable: true })
+    installmentNumber: number;             // Parcela nº (1, 2, 3...)
+
+    @Column({ type: 'int', nullable: true })
+    installmentTotal: number;              // Total de parcelas planejadas
+
+    // Quem editou o valor por último
+    @Column({ nullable: true })
+    editedBy: string;                      // userId
+
+    // Histórico inline de edições [{userId, userName, from, to, at, reason}]
+    @Column({ type: 'jsonb', nullable: true, default: '[]' })
+    editHistory: any[];
 
     @CreateDateColumn()
     createdAt: Date;

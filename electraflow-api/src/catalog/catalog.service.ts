@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
+import * as https from 'https';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { CatalogCategory, CatalogItem, CatalogType } from './catalog.entity';
@@ -11,6 +12,29 @@ import { CFOP_LIST, CfopEntry } from './cfop-data';
 @Injectable()
 export class CatalogService {
     private readonly logger = new Logger(CatalogService.name);
+
+    /** Helper HTTP GET usando módulo https nativo (mais confiável que fetch no Node v24) */
+    private httpGet(url: string): Promise<any> {
+        return new Promise((resolve, reject) => {
+            https.get(url, (res) => {
+                let body = '';
+                res.on('data', (chunk) => body += chunk);
+                res.on('end', () => {
+                    if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+                        try {
+                            resolve(JSON.parse(body));
+                        } catch (e) {
+                            reject(new Error(`JSON parse error: ${body.substring(0, 200)}`));
+                        }
+                    } else {
+                        reject(new Error(`HTTP ${res.statusCode}: ${body.substring(0, 200)}`));
+                    }
+                });
+            }).on('error', (err) => {
+                reject(new Error(`Network error: ${err.message}`));
+            });
+        });
+    }
     constructor(
         @InjectRepository(CatalogCategory)
         private categoryRepository: Repository<CatalogCategory>,
@@ -382,13 +406,7 @@ export class CatalogService {
         }
 
         try {
-            const response = await fetch(
-                `https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`,
-            );
-            if (!response.ok) {
-                throw new Error(`BrasilAPI retornou ${response.status}`);
-            }
-            const data = await response.json();
+            const data: any = await this.httpGet(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`);
             return {
                 cnpj: data.cnpj,
                 razaoSocial: data.razao_social,
@@ -409,7 +427,7 @@ export class CatalogService {
         } catch (error: any) {
             this.logger.error('Erro ao consultar CNPJ:', error?.message);
             throw new BadRequestException(
-                'Não foi possível consultar o CNPJ. Verifique se o número está correto.',
+                `Não foi possível consultar o CNPJ: ${error?.message || 'erro desconhecido'}`,
             );
         }
     }
@@ -425,13 +443,7 @@ export class CatalogService {
         }
 
         try {
-            const response = await fetch(
-                `https://viacep.com.br/ws/${cleanCep}/json/`,
-            );
-            if (!response.ok) {
-                throw new Error(`ViaCEP retornou ${response.status}`);
-            }
-            const data = await response.json();
+            const data: any = await this.httpGet(`https://viacep.com.br/ws/${cleanCep}/json/`);
             if (data.erro) {
                 throw new Error('CEP não encontrado');
             }
@@ -447,7 +459,7 @@ export class CatalogService {
         } catch (error: any) {
             this.logger.error('Erro ao consultar CEP:', error?.message);
             throw new BadRequestException(
-                'Não foi possível consultar o CEP. Verifique se o número está correto.',
+                `Não foi possível consultar o CEP: ${error?.message || 'erro desconhecido'}`,
             );
         }
     }

@@ -34,7 +34,13 @@ import {
     Clock,
     XCircle,
     Key,
+    KeyRound,
+    Copy,
     Users as UsersIcon,
+    Activity,
+    CalendarDays,
+    Wifi,
+    WifiOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -63,10 +69,18 @@ const AVAILABLE_MODULES = [
     { id: 'protocols', label: 'Protocolos' },
     { id: 'documents', label: 'Documentos' },
     { id: 'employees', label: 'Funcionários' },
+    { id: 'users', label: 'Usuários' },
     { id: 'clients', label: 'Clientes' },
     { id: 'finance', label: 'Financeiro' },
     { id: 'finance-simulator', label: 'Simulador Investimento' },
     { id: 'catalog', label: 'Catálogo' },
+    { id: 'suppliers', label: 'Fornecedores' },
+    { id: 'quotations', label: 'Cotações' },
+    { id: 'price-history', label: 'Histórico de Preços' },
+    { id: 'fiscal', label: 'Fiscal / NF-e' },
+    { id: 'compliance', label: 'Compliance' },
+    { id: 'client-requests', label: 'Solicitações de Clientes' },
+    { id: 'settings', label: 'Configurações' },
 ];
 
 export default function AdminUsers() {
@@ -88,6 +102,17 @@ export default function AdminUsers() {
     const [inviteResult, setInviteResult] = useState<{ emailSent: boolean; generatedPassword: string } | null>(null);
     const [permissionsForm, setPermissionsForm] = useState<string[]>([]);
     const [saving, setSaving] = useState(false);
+    const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
+    const [resetPasswordResult, setResetPasswordResult] = useState<{ userName: string; userEmail: string; newPassword: string } | null>(null);
+    const [, setResettingPassword] = useState(false);
+
+    // === Disponibilidade ===
+    const [availability, setAvailability] = useState<any[]>([]);
+    const [availDate, setAvailDate] = useState(() => {
+        const d = new Date();
+        return d.toISOString().slice(0, 10);
+    });
+    const [loadingAvail, setLoadingAvail] = useState(false);
 
     const loadUsers = async () => {
         try {
@@ -104,6 +129,25 @@ export default function AdminUsers() {
     useEffect(() => {
         loadUsers();
     }, []);
+
+    // Carrega disponibilidade quando muda a data
+    const loadAvailability = async () => {
+        try {
+            setLoadingAvail(true);
+            const data = await api.getUserAvailability(availDate);
+            setAvailability(data);
+        } catch (error) {
+            console.error('Erro ao carregar disponibilidade:', error);
+        } finally {
+            setLoadingAvail(false);
+        }
+    };
+
+    useEffect(() => {
+        loadAvailability();
+        const interval = setInterval(loadAvailability, 60 * 1000); // Atualiza a cada 1 min
+        return () => clearInterval(interval);
+    }, [availDate]);
 
     const handleDelete = async (id: string) => {
         if (!confirm('Deseja desativar este usuário?')) return;
@@ -190,6 +234,24 @@ export default function AdminUsers() {
         setInviteResult(null);
     };
 
+    const handleResetPassword = async (user: any) => {
+        if (!confirm(`Resetar a senha de ${user.name}? Uma nova senha será gerada.`)) return;
+        setResettingPassword(true);
+        try {
+            const result = await api.resetUserPassword(user.id);
+            setResetPasswordResult({
+                userName: user.name,
+                userEmail: user.email,
+                newPassword: result.newPassword,
+            });
+            setShowResetPasswordDialog(true);
+        } catch (error: any) {
+            alert(error?.response?.data?.message || 'Erro ao resetar senha');
+        } finally {
+            setResettingPassword(false);
+        }
+    };
+
     const filteredUsers = users.filter(user =>
         user.name?.toLowerCase().includes(search.toLowerCase()) ||
         user.email?.toLowerCase().includes(search.toLowerCase())
@@ -255,6 +317,120 @@ export default function AdminUsers() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Disponibilidade Diária */}
+            <Card>
+                <CardContent className="p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+                            <Activity className="w-5 h-5 text-emerald-500" />
+                            Disponibilidade na Plataforma
+                        </h2>
+                        <div className="flex items-center gap-2">
+                            <CalendarDays className="w-4 h-4 text-slate-400" />
+                            <input
+                                type="date"
+                                value={availDate}
+                                onChange={e => setAvailDate(e.target.value)}
+                                className="text-sm border border-slate-200 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                            />
+                        </div>
+                    </div>
+
+                    {loadingAvail ? (
+                        <p className="text-center py-6 text-slate-400">Carregando...</p>
+                    ) : availability.length === 0 ? (
+                        <p className="text-center py-6 text-slate-400">Nenhum dado para esta data</p>
+                    ) : (
+                        <div className="space-y-2">
+                            {availability.map(u => {
+                                const MAX_HOURS = 10;
+                                const pct = Math.min((u.totalMinutes / (MAX_HOURS * 60)) * 100, 100);
+                                const barColor = u.isOnline
+                                    ? 'bg-gradient-to-r from-emerald-400 to-emerald-500'
+                                    : u.totalMinutes > 0
+                                        ? 'bg-gradient-to-r from-slate-300 to-slate-400'
+                                        : 'bg-slate-200';
+                                const roleInfo = roleConfig[u.role] || { label: u.role, color: 'bg-slate-500' };
+
+                                return (
+                                    <div key={u.userId} className="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-slate-50 transition-colors">
+                                        {/* Avatar + status */}
+                                        <div className="relative">
+                                            <div className={cn(
+                                                'w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-medium',
+                                                roleInfo.color
+                                            )}>
+                                                {u.userName?.charAt(0).toUpperCase()}
+                                            </div>
+                                            <div className={cn(
+                                                'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white',
+                                                u.isOnline ? 'bg-emerald-400' : 'bg-slate-300'
+                                            )} />
+                                        </div>
+
+                                        {/* Nome + status */}
+                                        <div className="w-36 min-w-[9rem]">
+                                            <p className="text-sm font-medium text-slate-800 truncate">{u.userName}</p>
+                                            <div className="flex items-center gap-1">
+                                                {u.isOnline ? (
+                                                    <><Wifi className="w-3 h-3 text-emerald-500" /><span className="text-[11px] text-emerald-600">Online</span></>
+                                                ) : (
+                                                    <><WifiOff className="w-3 h-3 text-slate-400" /><span className="text-[11px] text-slate-400">Offline</span></>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Barra de progresso */}
+                                        <div className="flex-1">
+                                            <div className="h-5 bg-slate-100 rounded-full overflow-hidden relative">
+                                                <div
+                                                    className={cn('h-full rounded-full transition-all duration-500', barColor)}
+                                                    style={{ width: `${pct}%` }}
+                                                />
+                                                {pct > 15 && (
+                                                    <span className="absolute inset-0 flex items-center px-2.5 text-[11px] font-medium text-white drop-shadow">
+                                                        {u.totalFormatted}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Tempo total */}
+                                        <div className="w-16 text-right">
+                                            <span className="text-sm font-semibold text-slate-700">{u.totalFormatted}</span>
+                                        </div>
+
+                                        {/* Sessões */}
+                                        <div className="w-20 text-right">
+                                            <span className="text-xs text-slate-400">
+                                                {u.sessions.length} {u.sessions.length === 1 ? 'sessão' : 'sessões'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    {/* Legenda */}
+                    <div className="flex gap-4 mt-3 pt-3 border-t border-slate-100">
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                            Online agora
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                            <div className="w-2.5 h-2.5 rounded-full bg-slate-300" />
+                            Offline (ativo hoje)
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                            <div className="w-2.5 h-2.5 rounded-full bg-slate-200" />
+                            Sem atividade
+                        </div>
+                        <span className="ml-auto text-[11px] text-slate-400">Barra = proporção de 10h</span>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* User List */}
             <Card>
@@ -339,6 +515,10 @@ export default function AdminUsers() {
                                                             <DropdownMenuItem onClick={() => handleOpenPermissions(user)}>
                                                                 <Key className="w-4 h-4 mr-2" />
                                                                 Permissões
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem onClick={() => handleResetPassword(user)}>
+                                                                <KeyRound className="w-4 h-4 mr-2" />
+                                                                Resetar Senha
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem onClick={() => handleDelete(user.id)} className="text-red-600">
                                                                 <Trash2 className="w-4 h-4 mr-2" />
@@ -589,6 +769,62 @@ export default function AdminUsers() {
                                     {saving ? 'Salvando...' : 'Salvar Permissões'}
                                 </Button>
                             </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Dialog: Senha Resetada */}
+            <Dialog open={showResetPasswordDialog} onOpenChange={(open) => { setShowResetPasswordDialog(open); if (!open) setResetPasswordResult(null); }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <KeyRound className="w-5 h-5 text-amber-500" />
+                            Senha Resetada
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    {resetPasswordResult && (
+                        <div className="space-y-4">
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                                <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
+                                <h3 className="font-semibold text-green-800">Nova senha gerada com sucesso!</h3>
+                            </div>
+
+                            <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-2">
+                                <p className="text-sm text-slate-600">
+                                    <strong>Usuário:</strong> {resetPasswordResult.userName}
+                                </p>
+                                <p className="text-sm text-slate-600">
+                                    <strong>E-mail:</strong> {resetPasswordResult.userEmail}
+                                </p>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <p className="text-sm text-slate-600"><strong>Nova Senha:</strong></p>
+                                    <code className="bg-slate-900 text-amber-400 px-3 py-1 rounded text-base font-mono">
+                                        {resetPasswordResult.newPassword}
+                                    </code>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(resetPasswordResult.newPassword);
+                                            alert('Senha copiada!');
+                                        }}
+                                        className="p-1.5 rounded-md hover:bg-slate-200 transition-colors"
+                                        title="Copiar senha"
+                                    >
+                                        <Copy className="w-4 h-4 text-slate-500" />
+                                    </button>
+                                </div>
+                                <p className="text-xs text-red-500 mt-2">
+                                    ⚠️ Copie esta senha agora! Ela não será exibida novamente.
+                                </p>
+                            </div>
+
+                            <Button
+                                onClick={() => { setShowResetPasswordDialog(false); setResetPasswordResult(null); }}
+                                className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900"
+                            >
+                                Fechar
+                            </Button>
                         </div>
                     )}
                 </DialogContent>

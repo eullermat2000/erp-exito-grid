@@ -1,15 +1,20 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Between, LessThan, MoreThanOrEqual } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import { User, UserRole, UserStatus } from './user.entity';
+import { UserSession } from './user-session.entity';
 import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectRepository(User)
     private userRepository: Repository<User>,
+    @InjectRepository(UserSession)
+    private sessionRepository: Repository<UserSession>,
     private emailService: EmailService,
   ) { }
 
@@ -131,6 +136,15 @@ export class UsersService {
     return user;
   }
 
+  // === Resetar Senha (Admin) ===
+  async resetPassword(id: string): Promise<{ newPassword: string }> {
+    const user = await this.findOne(id);
+    const newPassword = this.generatePassword();
+    user.password = await bcrypt.hash(newPassword, 10);
+    await this.userRepository.save(user);
+    return { newPassword };
+  }
+
   // Gera senha aleatória
   private generatePassword(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
@@ -139,5 +153,110 @@ export class UsersService {
       password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return password;
+  }
+
+  // ═══ Disponibilidade / Heartbeat ═══════════════════════════════════════
+
+  async heartbeat(userId: string): Promise<{ ok: boolean }> {
+    const now = new Date();
+    const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutos
+
+    // Fechar sessões abandonadas de qualquer usuário (>5 min sem heartbeat)
+    await this.sessionRepository
+      .createQueryBuilder()
+      .update(UserSession)
+      .set({
+        isActive: false,
+        logoutAt: () => '"lastHeartbeat"',
+        durationMinutes: () => 'EXTRACT(EPOCH FROM ("lastHeartbeat" - "loginAt")) / 60',
+      })
+      .where('"isActive" = true AND "lastHeartbeat" < :cutoff', {
+        cutoff: new Date(now.getTime() - TIMEOUT_MS),
+      })
+      .execute();
+
+    // Procurar sessão ativa deste usuário
+    let session = await this.sessionRepository.findOne({
+      where: { userId, isActive: true },
+    });
+
+    if (session) {
+      // Atualizar heartbeat
+      session.lastHeartbeat = now;
+      session.durationMinutes = Math.round(
+        (now.getTime() - new Date(session.loginAt).getTime()) / 60000,
+      );
+      await this.sessionRepository.save(session);
+    } else {
+      // Criar nova sessão
+      session = this.sessionRepository.create({
+        userId,
+        loginAt: now,
+        lastHeartbeat: now,
+        durationMinutes: 0,
+        isActive: true,
+      });
+      await this.sessionRepository.save(session);
+      this.logger.log(`[Session] Nova sessão iniciada para userId=${userId}`);
+    }
+
+    // Atualizar isOnline no user
+    await this.userRepository.update(userId, { isOnline: true });
+
+    return { ok: true };
+  }
+
+  async getAvailability(dateStr?: string): Promise<any[]> {
+    const targetDate = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Buscar todos os usuários ativos
+    const users = await this.userRepository.find({
+      where: { isActive: true },
+      order: { name: 'ASC' },
+    });
+
+    // Buscar sessões do dia
+    const sessions = await this.sessionRepository.find({
+      where: {
+        loginAt: Between(startOfDay, endOfDay),
+      },
+      order: { loginAt: 'ASC' },
+    });
+
+    // Agrupar por usuário
+    const result = users.map(user => {
+      const userSessions = sessions.filter(s => s.userId === user.id);
+      const totalMinutes = userSessions.reduce((sum, s) => sum + (s.durationMinutes || 0), 0);
+      const hours = Math.floor(totalMinutes / 60);
+      const mins = totalMinutes % 60;
+
+      return {
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        role: user.role,
+        avatarUrl: user.avatarUrl,
+        isOnline: user.isOnline,
+        lastLoginAt: user.lastLoginAt,
+        totalMinutes,
+        totalFormatted: `${hours}h ${mins}m`,
+        sessions: userSessions.map(s => ({
+          id: s.id,
+          loginAt: s.loginAt,
+          logoutAt: s.logoutAt,
+          durationMinutes: s.durationMinutes,
+          isActive: s.isActive,
+        })),
+      };
+    });
+
+    // Ordenar por tempo online (maior primeiro)
+    result.sort((a, b) => b.totalMinutes - a.totalMinutes);
+
+    return result;
   }
 }

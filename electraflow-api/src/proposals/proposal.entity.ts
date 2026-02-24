@@ -139,57 +139,99 @@ export class Proposal {
   summaryTotalLabel: string;             // Label do valor total no modo resumo (ex: "Valor Global")
 
   // ═══════════════════════════════════════════════════════════════
-  // Custos Adicionais (logístico, administrativo, corretagem/seguro)
-  // Modo: 'visible' = mostrar ao cliente | 'embedded' = embutir no preço
+  // Custos Adicionais (logístico, administrativo, corretagem, seguro)
+  // Modo: 'visible' | 'embedded' | 'evidenciado'
+  // Quando embedded: split percentual entre Material e Serviço
+  // Quando evidenciado: exibe com texto técnico-comercial descritivo
   // ═══════════════════════════════════════════════════════════════
 
+  // ── Logístico ──
   @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
-  logisticsCostValue: number;            // Valor do custo logístico
+  logisticsCostValue: number;
 
   @Column({ nullable: true, default: 'visible' })
-  logisticsCostMode: string;             // 'visible' | 'embedded'
+  logisticsCostMode: string;             // 'visible' | 'embedded' | 'evidenciado'
 
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
-  logisticsCostPercent: number;          // Percentual sobre material (alternativa ao valor fixo)
+  logisticsCostPercent: number;
 
   @Column({ nullable: true, default: 'material' })
-  logisticsCostApplyTo: string;          // 'material' | 'service' | 'both' (onde embutir)
+  logisticsCostApplyTo: string;          // legado, mantido para compat
 
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 100 })
+  logisticsCostEmbedMaterialPct: number; // % a embutir em Material
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 0 })
+  logisticsCostEmbedServicePct: number;  // % a embutir em Serviço
+
+  @Column({ type: 'text', nullable: true })
+  logisticsCostDescription: string;      // Texto descritivo (modo evidenciado)
+
+  // ── Administrativo ──
   @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
-  adminCostValue: number;               // Custo administrativo
+  adminCostValue: number;
 
   @Column({ nullable: true, default: 'visible' })
-  adminCostMode: string;                // 'visible' | 'embedded'
+  adminCostMode: string;
 
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
-  adminCostPercent: number;             // Percentual alternativo
+  adminCostPercent: number;
 
   @Column({ nullable: true, default: 'material' })
-  adminCostApplyTo: string;             // 'material' | 'service' | 'both'
+  adminCostApplyTo: string;
 
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 100 })
+  adminCostEmbedMaterialPct: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 0 })
+  adminCostEmbedServicePct: number;
+
+  @Column({ type: 'text', nullable: true })
+  adminCostDescription: string;
+
+  // ── Corretagem ──
   @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
-  brokerageCostValue: number;           // Corretagem / Seguro
+  brokerageCostValue: number;
 
   @Column({ nullable: true, default: 'visible' })
-  brokerageCostMode: string;            // 'visible' | 'embedded'
+  brokerageCostMode: string;
 
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
-  brokerageCostPercent: number;         // Percentual alternativo
+  brokerageCostPercent: number;
 
   @Column({ nullable: true, default: 'material' })
-  brokerageCostApplyTo: string;         // 'material' | 'service' | 'both'
+  brokerageCostApplyTo: string;
 
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 100 })
+  brokerageCostEmbedMaterialPct: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 0 })
+  brokerageCostEmbedServicePct: number;
+
+  @Column({ type: 'text', nullable: true })
+  brokerageCostDescription: string;
+
+  // ── Seguro ──
   @Column({ type: 'decimal', precision: 15, scale: 2, nullable: true })
-  insuranceCostValue: number;           // Seguro
+  insuranceCostValue: number;
 
   @Column({ nullable: true, default: 'visible' })
-  insuranceCostMode: string;            // 'visible' | 'embedded'
+  insuranceCostMode: string;
 
   @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
-  insuranceCostPercent: number;         // Percentual alternativo
+  insuranceCostPercent: number;
 
   @Column({ nullable: true, default: 'material' })
-  insuranceCostApplyTo: string;         // 'material' | 'service' | 'both'
+  insuranceCostApplyTo: string;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 100 })
+  insuranceCostEmbedMaterialPct: number;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true, default: 0 })
+  insuranceCostEmbedServicePct: number;
+
+  @Column({ type: 'text', nullable: true })
+  insuranceCostDescription: string;
 
   // ═══════════════════════════════════════════════════════════════
   // Conformidade Normativa

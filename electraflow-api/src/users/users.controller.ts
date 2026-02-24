@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard, Roles } from '../auth/roles.guard';
@@ -27,6 +27,20 @@ export class UsersController {
       id: mod,
       label: this.getModuleLabel(mod),
     }));
+  }
+
+  @Post('heartbeat')
+  @ApiOperation({ summary: 'Registrar heartbeat de presença do usuário' })
+  async heartbeat(@Request() req) {
+    return this.usersService.heartbeat(req.user.userId);
+  }
+
+  @Get('availability')
+  @ApiOperation({ summary: 'Consultar disponibilidade diária dos usuários (admin)' })
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async getAvailability(@Query('date') date?: string) {
+    return this.usersService.getAvailability(date);
   }
 
   @Get(':id')
@@ -94,6 +108,14 @@ export class UsersController {
     return this.usersService.updateSupervisor(id, body.supervisorId);
   }
 
+  @Post(':id/reset-password')
+  @ApiOperation({ summary: 'Resetar senha do usuário (admin gera nova senha)' })
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  async resetPassword(@Param('id') id: string) {
+    return this.usersService.resetPassword(id);
+  }
+
   @Delete(':id')
   @ApiOperation({ summary: 'Desativar usuário' })
   @UseGuards(RolesGuard)
@@ -116,8 +138,14 @@ export class UsersController {
       'users': 'Usuários',
       'clients': 'Clientes',
       'finance': 'Financeiro',
-      'finance-simulator': 'Simulador Munck',
+      'finance-simulator': 'Simulador Investimento',
       'catalog': 'Catálogo',
+      'suppliers': 'Fornecedores',
+      'quotations': 'Cotações',
+      'price-history': 'Histórico de Preços',
+      'fiscal': 'Fiscal / NF-e',
+      'compliance': 'Compliance',
+      'client-requests': 'Solicitações de Clientes',
       'settings': 'Configurações',
     };
     return labels[mod] || mod;

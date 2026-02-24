@@ -115,18 +115,30 @@ export default function NewProposalDialog({
         logisticsCostMode: 'visible',
         logisticsCostPercent: '',
         logisticsCostApplyTo: 'material',
+        logisticsCostEmbedMaterialPct: '100',
+        logisticsCostEmbedServicePct: '0',
+        logisticsCostDescription: 'Custo referente à mobilização e desmobilização de equipes, transporte de equipamentos especializados, veículos operacionais, combustível, pedágios e logística de campo necessários para a execução dos serviços no local da obra.',
         adminCostValue: '',
         adminCostMode: 'visible',
         adminCostPercent: '',
         adminCostApplyTo: 'material',
+        adminCostEmbedMaterialPct: '100',
+        adminCostEmbedServicePct: '0',
+        adminCostDescription: 'Custo referente à gestão administrativa do contrato, incluindo coordenação técnica do projeto, acompanhamento e fiscalização de fornecedores, controle de qualidade, gestão documental, elaboração de relatórios técnicos e suporte operacional durante toda a vigência contratual.',
         brokerageCostValue: '',
         brokerageCostMode: 'visible',
         brokerageCostPercent: '',
         brokerageCostApplyTo: 'material',
+        brokerageCostEmbedMaterialPct: '100',
+        brokerageCostEmbedServicePct: '0',
+        brokerageCostDescription: 'Custo referente a honorários de intermediação comercial, prospecção de oportunidades, negociação contratual e assessoria técnico-comercial para viabilização do projeto junto ao contratante.',
         insuranceCostValue: '',
         insuranceCostMode: 'visible',
         insuranceCostPercent: '',
         insuranceCostApplyTo: 'material',
+        insuranceCostEmbedMaterialPct: '100',
+        insuranceCostEmbedServicePct: '0',
+        insuranceCostDescription: 'Custo referente à contratação de seguro de responsabilidade civil, cobertura de riscos operacionais, garantia sobre materiais e equipamentos, e proteção patrimonial durante a execução dos serviços conforme exigências normativas aplicáveis.',
         complianceText: '',
         // Visibilidade dos itens
         itemVisibilityMode: 'detailed',
@@ -170,18 +182,30 @@ export default function NewProposalDialog({
                     logisticsCostMode: initialData.logisticsCostMode || 'visible',
                     logisticsCostPercent: String(initialData.logisticsCostPercent || ''),
                     logisticsCostApplyTo: initialData.logisticsCostApplyTo || 'material',
+                    logisticsCostEmbedMaterialPct: String(initialData.logisticsCostEmbedMaterialPct ?? '100'),
+                    logisticsCostEmbedServicePct: String(initialData.logisticsCostEmbedServicePct ?? '0'),
+                    logisticsCostDescription: initialData.logisticsCostDescription || 'Custo referente à mobilização e desmobilização de equipes, transporte de equipamentos especializados, veículos operacionais, combustível, pedágios e logística de campo necessários para a execução dos serviços no local da obra.',
                     adminCostValue: String(initialData.adminCostValue || ''),
                     adminCostMode: initialData.adminCostMode || 'visible',
                     adminCostPercent: String(initialData.adminCostPercent || ''),
                     adminCostApplyTo: initialData.adminCostApplyTo || 'material',
+                    adminCostEmbedMaterialPct: String(initialData.adminCostEmbedMaterialPct ?? '100'),
+                    adminCostEmbedServicePct: String(initialData.adminCostEmbedServicePct ?? '0'),
+                    adminCostDescription: initialData.adminCostDescription || 'Custo referente à gestão administrativa do contrato, incluindo coordenação técnica do projeto, acompanhamento e fiscalização de fornecedores, controle de qualidade, gestão documental, elaboração de relatórios técnicos e suporte operacional durante toda a vigência contratual.',
                     brokerageCostValue: String(initialData.brokerageCostValue || ''),
                     brokerageCostMode: initialData.brokerageCostMode || 'visible',
                     brokerageCostPercent: String(initialData.brokerageCostPercent || ''),
                     brokerageCostApplyTo: initialData.brokerageCostApplyTo || 'material',
+                    brokerageCostEmbedMaterialPct: String(initialData.brokerageCostEmbedMaterialPct ?? '100'),
+                    brokerageCostEmbedServicePct: String(initialData.brokerageCostEmbedServicePct ?? '0'),
+                    brokerageCostDescription: initialData.brokerageCostDescription || 'Custo referente a honorários de intermediação comercial, prospecção de oportunidades, negociação contratual e assessoria técnico-comercial para viabilização do projeto junto ao contratante.',
                     insuranceCostValue: String(initialData.insuranceCostValue || ''),
                     insuranceCostMode: initialData.insuranceCostMode || 'visible',
                     insuranceCostPercent: String(initialData.insuranceCostPercent || ''),
                     insuranceCostApplyTo: initialData.insuranceCostApplyTo || 'material',
+                    insuranceCostEmbedMaterialPct: String(initialData.insuranceCostEmbedMaterialPct ?? '100'),
+                    insuranceCostEmbedServicePct: String(initialData.insuranceCostEmbedServicePct ?? '0'),
+                    insuranceCostDescription: initialData.insuranceCostDescription || 'Custo referente à contratação de seguro de responsabilidade civil, cobertura de riscos operacionais, garantia sobre materiais e equipamentos, e proteção patrimonial durante a execução dos serviços conforme exigências normativas aplicáveis.',
                     complianceText: initialData.complianceText || '',
                     itemVisibilityMode: initialData.itemVisibilityMode || 'detailed',
                     materialSummaryText: initialData.materialSummaryText || '',
@@ -306,18 +330,30 @@ export default function NewProposalDialog({
             logisticsCostMode: 'visible',
             logisticsCostPercent: '',
             logisticsCostApplyTo: 'material',
+            logisticsCostEmbedMaterialPct: '100',
+            logisticsCostEmbedServicePct: '0',
+            logisticsCostDescription: 'Custo referente à mobilização e desmobilização de equipes, transporte de equipamentos especializados, veículos operacionais, combustível, pedágios e logística de campo necessários para a execução dos serviços no local da obra.',
             adminCostValue: '',
             adminCostMode: 'visible',
             adminCostPercent: '',
             adminCostApplyTo: 'material',
+            adminCostEmbedMaterialPct: '100',
+            adminCostEmbedServicePct: '0',
+            adminCostDescription: 'Custo referente à gestão administrativa do contrato, incluindo coordenação técnica do projeto, acompanhamento e fiscalização de fornecedores, controle de qualidade, gestão documental, elaboração de relatórios técnicos e suporte operacional durante toda a vigência contratual.',
             brokerageCostValue: '',
             brokerageCostMode: 'visible',
             brokerageCostPercent: '',
             brokerageCostApplyTo: 'material',
+            brokerageCostEmbedMaterialPct: '100',
+            brokerageCostEmbedServicePct: '0',
+            brokerageCostDescription: 'Custo referente a honorários de intermediação comercial, prospecção de oportunidades, negociação contratual e assessoria técnico-comercial para viabilização do projeto junto ao contratante.',
             insuranceCostValue: '',
             insuranceCostMode: 'visible',
             insuranceCostPercent: '',
             insuranceCostApplyTo: 'material',
+            insuranceCostEmbedMaterialPct: '100',
+            insuranceCostEmbedServicePct: '0',
+            insuranceCostDescription: 'Custo referente à contratação de seguro de responsabilidade civil, cobertura de riscos operacionais, garantia sobre materiais e equipamentos, e proteção patrimonial durante a execução dos serviços conforme exigências normativas aplicáveis.',
             complianceText: '',
             itemVisibilityMode: 'detailed',
             materialSummaryText: '',
@@ -375,14 +411,30 @@ export default function NewProposalDialog({
                     logisticsCostMode: formData.logisticsCostMode || 'visible',
                     logisticsCostPercent: formData.logisticsCostPercent ? Number(formData.logisticsCostPercent) : null,
                     logisticsCostApplyTo: formData.logisticsCostApplyTo || 'material',
+                    logisticsCostEmbedMaterialPct: formData.logisticsCostEmbedMaterialPct ? Number(formData.logisticsCostEmbedMaterialPct) : 100,
+                    logisticsCostEmbedServicePct: formData.logisticsCostEmbedServicePct ? Number(formData.logisticsCostEmbedServicePct) : 0,
+                    logisticsCostDescription: formData.logisticsCostDescription || null,
                     adminCostValue: formData.adminCostValue ? Number(formData.adminCostValue) : null,
                     adminCostMode: formData.adminCostMode || 'visible',
                     adminCostPercent: formData.adminCostPercent ? Number(formData.adminCostPercent) : null,
                     adminCostApplyTo: formData.adminCostApplyTo || 'material',
+                    adminCostEmbedMaterialPct: formData.adminCostEmbedMaterialPct ? Number(formData.adminCostEmbedMaterialPct) : 100,
+                    adminCostEmbedServicePct: formData.adminCostEmbedServicePct ? Number(formData.adminCostEmbedServicePct) : 0,
+                    adminCostDescription: formData.adminCostDescription || null,
                     brokerageCostValue: formData.brokerageCostValue ? Number(formData.brokerageCostValue) : null,
                     brokerageCostMode: formData.brokerageCostMode || 'visible',
                     brokerageCostPercent: formData.brokerageCostPercent ? Number(formData.brokerageCostPercent) : null,
                     brokerageCostApplyTo: formData.brokerageCostApplyTo || 'material',
+                    brokerageCostEmbedMaterialPct: formData.brokerageCostEmbedMaterialPct ? Number(formData.brokerageCostEmbedMaterialPct) : 100,
+                    brokerageCostEmbedServicePct: formData.brokerageCostEmbedServicePct ? Number(formData.brokerageCostEmbedServicePct) : 0,
+                    brokerageCostDescription: formData.brokerageCostDescription || null,
+                    insuranceCostValue: formData.insuranceCostValue ? Number(formData.insuranceCostValue) : null,
+                    insuranceCostMode: formData.insuranceCostMode || 'visible',
+                    insuranceCostPercent: formData.insuranceCostPercent ? Number(formData.insuranceCostPercent) : null,
+                    insuranceCostApplyTo: formData.insuranceCostApplyTo || 'material',
+                    insuranceCostEmbedMaterialPct: formData.insuranceCostEmbedMaterialPct ? Number(formData.insuranceCostEmbedMaterialPct) : 100,
+                    insuranceCostEmbedServicePct: formData.insuranceCostEmbedServicePct ? Number(formData.insuranceCostEmbedServicePct) : 0,
+                    insuranceCostDescription: formData.insuranceCostDescription || null,
                     complianceText: formData.complianceText || null,
                     itemVisibilityMode: formData.itemVisibilityMode || 'detailed',
                     materialSummaryText: formData.materialSummaryText || null,
@@ -393,7 +445,11 @@ export default function NewProposalDialog({
             };
 
             if (initialData?.id) {
-                await api.updateProposal(initialData.id, payload);
+                // Atualizar proposta: enviar dados e itens separadamente
+                await api.updateProposal(initialData.id, payload.proposal);
+                if (validItems.length > 0) {
+                    await api.updateProposalItems(initialData.id, validItems);
+                }
                 toast.success('Proposta atualizada com sucesso!');
             } else {
                 await api.createProposal(payload);
@@ -1060,13 +1116,13 @@ export default function NewProposalDialog({
                             <DollarSign className="w-4 h-4" /> Composição de Custos Adicionais
                         </h3>
                         <p className="text-xs text-slate-400">
-                            Configure os custos extras. Escolha se cada custo aparece visível na proposta ou é embutido no preço.
+                            Configure os custos extras. Escolha se cada custo aparece visível na proposta, é embutido no preço ou é evidenciado com descrição técnica.
                         </p>
 
-                        {/* Logístico */}
+                        {/* ── Logístico ── */}
                         <div className="border rounded-lg p-4 space-y-3">
                             <p className="text-sm font-semibold text-slate-700">Custo Logístico</p>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 <div className="space-y-1">
                                     <Label className="text-xs">Valor (R$)</Label>
                                     <Input type="number" step="0.01" placeholder="0,00" value={formData.logisticsCostValue}
@@ -1084,27 +1140,45 @@ export default function NewProposalDialog({
                                         <SelectContent>
                                             <SelectItem value="visible">Visível ao cliente</SelectItem>
                                             <SelectItem value="embedded">Embutir no preço</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label className="text-xs">Embutir em</Label>
-                                    <Select value={formData.logisticsCostApplyTo} onValueChange={(v) => setFormData({ ...formData, logisticsCostApplyTo: v })}>
-                                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="material">Material</SelectItem>
-                                            <SelectItem value="service">Serviço</SelectItem>
-                                            <SelectItem value="both">Ambos</SelectItem>
+                                            <SelectItem value="evidenciado">Evidenciado (com descrição)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
+                            {formData.logisticsCostMode === 'embedded' && (
+                                <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50 rounded-md border border-amber-200">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-amber-700">% em Material</Label>
+                                        <Input type="number" step="1" min="0" max="100" value={formData.logisticsCostEmbedMaterialPct}
+                                            onChange={(e) => {
+                                                const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                                setFormData({ ...formData, logisticsCostEmbedMaterialPct: String(v), logisticsCostEmbedServicePct: String(100 - v) });
+                                            }} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-amber-700">% em Serviço</Label>
+                                        <Input type="number" step="1" min="0" max="100" value={formData.logisticsCostEmbedServicePct}
+                                            onChange={(e) => {
+                                                const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                                setFormData({ ...formData, logisticsCostEmbedServicePct: String(v), logisticsCostEmbedMaterialPct: String(100 - v) });
+                                            }} className="h-8 text-sm" />
+                                    </div>
+                                </div>
+                            )}
+                            {formData.logisticsCostMode === 'evidenciado' && (
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-blue-600">Descrição técnico-comercial</Label>
+                                    <Textarea rows={3} value={formData.logisticsCostDescription}
+                                        onChange={(e) => setFormData({ ...formData, logisticsCostDescription: e.target.value })}
+                                        className="text-sm" placeholder="Descreva a justificativa operacional e comercial deste custo..." />
+                                </div>
+                            )}
                         </div>
 
-                        {/* Administrativo */}
+                        {/* ── Administrativo ── */}
                         <div className="border rounded-lg p-4 space-y-3">
                             <p className="text-sm font-semibold text-slate-700">Custo Administrativo</p>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 <div className="space-y-1">
                                     <Label className="text-xs">Valor (R$)</Label>
                                     <Input type="number" step="0.01" placeholder="0,00" value={formData.adminCostValue}
@@ -1122,27 +1196,45 @@ export default function NewProposalDialog({
                                         <SelectContent>
                                             <SelectItem value="visible">Visível ao cliente</SelectItem>
                                             <SelectItem value="embedded">Embutir no preço</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label className="text-xs">Embutir em</Label>
-                                    <Select value={formData.adminCostApplyTo} onValueChange={(v) => setFormData({ ...formData, adminCostApplyTo: v })}>
-                                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="material">Material</SelectItem>
-                                            <SelectItem value="service">Serviço</SelectItem>
-                                            <SelectItem value="both">Ambos</SelectItem>
+                                            <SelectItem value="evidenciado">Evidenciado (com descrição)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
+                            {formData.adminCostMode === 'embedded' && (
+                                <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50 rounded-md border border-amber-200">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-amber-700">% em Material</Label>
+                                        <Input type="number" step="1" min="0" max="100" value={formData.adminCostEmbedMaterialPct}
+                                            onChange={(e) => {
+                                                const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                                setFormData({ ...formData, adminCostEmbedMaterialPct: String(v), adminCostEmbedServicePct: String(100 - v) });
+                                            }} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-amber-700">% em Serviço</Label>
+                                        <Input type="number" step="1" min="0" max="100" value={formData.adminCostEmbedServicePct}
+                                            onChange={(e) => {
+                                                const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                                setFormData({ ...formData, adminCostEmbedServicePct: String(v), adminCostEmbedMaterialPct: String(100 - v) });
+                                            }} className="h-8 text-sm" />
+                                    </div>
+                                </div>
+                            )}
+                            {formData.adminCostMode === 'evidenciado' && (
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-blue-600">Descrição técnico-comercial</Label>
+                                    <Textarea rows={3} value={formData.adminCostDescription}
+                                        onChange={(e) => setFormData({ ...formData, adminCostDescription: e.target.value })}
+                                        className="text-sm" placeholder="Descreva a justificativa operacional e comercial deste custo..." />
+                                </div>
+                            )}
                         </div>
 
-                        {/* Corretagem */}
+                        {/* ── Corretagem ── */}
                         <div className="border rounded-lg p-4 space-y-3">
                             <p className="text-sm font-semibold text-slate-700">Corretagem</p>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 <div className="space-y-1">
                                     <Label className="text-xs">Valor (R$)</Label>
                                     <Input type="number" step="0.01" placeholder="0,00" value={formData.brokerageCostValue}
@@ -1160,27 +1252,45 @@ export default function NewProposalDialog({
                                         <SelectContent>
                                             <SelectItem value="visible">Visível ao cliente</SelectItem>
                                             <SelectItem value="embedded">Embutir no preço</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label className="text-xs">Embutir em</Label>
-                                    <Select value={formData.brokerageCostApplyTo} onValueChange={(v) => setFormData({ ...formData, brokerageCostApplyTo: v })}>
-                                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="material">Material</SelectItem>
-                                            <SelectItem value="service">Serviço</SelectItem>
-                                            <SelectItem value="both">Ambos</SelectItem>
+                                            <SelectItem value="evidenciado">Evidenciado (com descrição)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
+                            {formData.brokerageCostMode === 'embedded' && (
+                                <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50 rounded-md border border-amber-200">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-amber-700">% em Material</Label>
+                                        <Input type="number" step="1" min="0" max="100" value={formData.brokerageCostEmbedMaterialPct}
+                                            onChange={(e) => {
+                                                const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                                setFormData({ ...formData, brokerageCostEmbedMaterialPct: String(v), brokerageCostEmbedServicePct: String(100 - v) });
+                                            }} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-amber-700">% em Serviço</Label>
+                                        <Input type="number" step="1" min="0" max="100" value={formData.brokerageCostEmbedServicePct}
+                                            onChange={(e) => {
+                                                const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                                setFormData({ ...formData, brokerageCostEmbedServicePct: String(v), brokerageCostEmbedMaterialPct: String(100 - v) });
+                                            }} className="h-8 text-sm" />
+                                    </div>
+                                </div>
+                            )}
+                            {formData.brokerageCostMode === 'evidenciado' && (
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-blue-600">Descrição técnico-comercial</Label>
+                                    <Textarea rows={3} value={formData.brokerageCostDescription}
+                                        onChange={(e) => setFormData({ ...formData, brokerageCostDescription: e.target.value })}
+                                        className="text-sm" placeholder="Descreva a justificativa operacional e comercial deste custo..." />
+                                </div>
+                            )}
                         </div>
 
-                        {/* Seguro */}
+                        {/* ── Seguro ── */}
                         <div className="border rounded-lg p-4 space-y-3">
                             <p className="text-sm font-semibold text-slate-700">Seguro</p>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                                 <div className="space-y-1">
                                     <Label className="text-xs">Valor (R$)</Label>
                                     <Input type="number" step="0.01" placeholder="0,00" value={formData.insuranceCostValue}
@@ -1198,21 +1308,39 @@ export default function NewProposalDialog({
                                         <SelectContent>
                                             <SelectItem value="visible">Visível ao cliente</SelectItem>
                                             <SelectItem value="embedded">Embutir no preço</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1">
-                                    <Label className="text-xs">Embutir em</Label>
-                                    <Select value={formData.insuranceCostApplyTo} onValueChange={(v) => setFormData({ ...formData, insuranceCostApplyTo: v })}>
-                                        <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="material">Material</SelectItem>
-                                            <SelectItem value="service">Serviço</SelectItem>
-                                            <SelectItem value="both">Ambos</SelectItem>
+                                            <SelectItem value="evidenciado">Evidenciado (com descrição)</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                             </div>
+                            {formData.insuranceCostMode === 'embedded' && (
+                                <div className="grid grid-cols-2 gap-3 p-3 bg-amber-50 rounded-md border border-amber-200">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-amber-700">% em Material</Label>
+                                        <Input type="number" step="1" min="0" max="100" value={formData.insuranceCostEmbedMaterialPct}
+                                            onChange={(e) => {
+                                                const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                                setFormData({ ...formData, insuranceCostEmbedMaterialPct: String(v), insuranceCostEmbedServicePct: String(100 - v) });
+                                            }} className="h-8 text-sm" />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-amber-700">% em Serviço</Label>
+                                        <Input type="number" step="1" min="0" max="100" value={formData.insuranceCostEmbedServicePct}
+                                            onChange={(e) => {
+                                                const v = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                                setFormData({ ...formData, insuranceCostEmbedServicePct: String(v), insuranceCostEmbedMaterialPct: String(100 - v) });
+                                            }} className="h-8 text-sm" />
+                                    </div>
+                                </div>
+                            )}
+                            {formData.insuranceCostMode === 'evidenciado' && (
+                                <div className="space-y-1">
+                                    <Label className="text-xs text-blue-600">Descrição técnico-comercial</Label>
+                                    <Textarea rows={3} value={formData.insuranceCostDescription}
+                                        onChange={(e) => setFormData({ ...formData, insuranceCostDescription: e.target.value })}
+                                        className="text-sm" placeholder="Descreva a justificativa operacional e comercial deste custo..." />
+                                </div>
+                            )}
                         </div>
                     </div>
 

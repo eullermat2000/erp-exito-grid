@@ -2,6 +2,7 @@ import React from 'react';
 
 interface ProposalPDFTemplateProps {
     proposal: any;
+    client?: any;
 }
 
 const fmt = (v: number) => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -30,6 +31,13 @@ export function ProposalPDFTemplate({ proposal }: ProposalPDFTemplateProps) {
     const showAdmin = proposal.adminCostMode !== 'embedded' && adminCost > 0;
     const showBrokerage = proposal.brokerageCostMode !== 'embedded' && brokerageCost > 0;
     const showInsurance = proposal.insuranceCostMode !== 'embedded' && insuranceCost > 0;
+
+    // Flags para modo evidenciado (exibe com descrição técnica)
+    const isLogisticsEvidenciado = proposal.logisticsCostMode === 'evidenciado' && logisticsCost > 0;
+    const isAdminEvidenciado = proposal.adminCostMode === 'evidenciado' && adminCost > 0;
+    const isBrokerageEvidenciado = proposal.brokerageCostMode === 'evidenciado' && brokerageCost > 0;
+    const isInsuranceEvidenciado = proposal.insuranceCostMode === 'evidenciado' && insuranceCost > 0;
+    const hasEvidenciadoCosts = isLogisticsEvidenciado || isAdminEvidenciado || isBrokerageEvidenciado || isInsuranceEvidenciado;
 
     const visibleCosts = (showLogistics ? logisticsCost : 0) + (showAdmin ? adminCost : 0) + (showBrokerage ? brokerageCost : 0) + (showInsurance ? insuranceCost : 0);
     const discount = Number(proposal.discount || 0);
@@ -295,6 +303,56 @@ export function ProposalPDFTemplate({ proposal }: ProposalPDFTemplateProps) {
                                         <span>R$ {fmt(grandTotal)}</span>
                                     </div>
                                 </div>
+
+                                {/* Custos Evidenciados — Descrição Técnica */}
+                                {hasEvidenciadoCosts && (
+                                    <div style={{ marginTop: '20px' }}>
+                                        {isLogisticsEvidenciado && (
+                                            <div style={{ marginBottom: '14px', padding: '14px 18px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: '#1e293b' }}>Custo Logístico</span>
+                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>R$ {fmt(logisticsCost)}</span>
+                                                </div>
+                                                <p style={{ fontSize: '10.5px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                                                    {proposal.logisticsCostDescription || 'Custo referente à mobilização e desmobilização de equipes, transporte de equipamentos especializados, veículos operacionais, combustível, pedágios e logística de campo necessários para a execução dos serviços no local da obra.'}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {isAdminEvidenciado && (
+                                            <div style={{ marginBottom: '14px', padding: '14px 18px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: '#1e293b' }}>Custo Administrativo</span>
+                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>R$ {fmt(adminCost)}</span>
+                                                </div>
+                                                <p style={{ fontSize: '10.5px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                                                    {proposal.adminCostDescription || 'Custo referente à gestão administrativa do contrato, incluindo coordenação técnica do projeto, acompanhamento e fiscalização de fornecedores, controle de qualidade, gestão documental, elaboração de relatórios técnicos e suporte operacional durante toda a vigência contratual.'}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {isBrokerageEvidenciado && (
+                                            <div style={{ marginBottom: '14px', padding: '14px 18px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: '#1e293b' }}>Corretagem</span>
+                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>R$ {fmt(brokerageCost)}</span>
+                                                </div>
+                                                <p style={{ fontSize: '10.5px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                                                    {proposal.brokerageCostDescription || 'Custo referente a honorários de intermediação comercial, prospecção de oportunidades, negociação contratual e assessoria técnico-comercial para viabilização do projeto junto ao contratante.'}
+                                                </p>
+                                            </div>
+                                        )}
+                                        {isInsuranceEvidenciado && (
+                                            <div style={{ marginBottom: '14px', padding: '14px 18px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: '#1e293b' }}>Seguro</span>
+                                                    <span style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>R$ {fmt(insuranceCost)}</span>
+                                                </div>
+                                                <p style={{ fontSize: '10.5px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                                                    {proposal.insuranceCostDescription || 'Custo referente à contratação de seguro de responsabilidade civil, cobertura de riscos operacionais, garantia sobre materiais e equipamentos, e proteção patrimonial durante a execução dos serviços conforme exigências normativas aplicáveis.'}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </>
                         );
                     }
@@ -372,6 +430,56 @@ export function ProposalPDFTemplate({ proposal }: ProposalPDFTemplateProps) {
                                         <span>{totalLabel.toUpperCase()}</span>
                                         <span>R$ {fmt(grandTotal)}</span>
                                     </div>
+                                </div>
+                            )}
+
+                            {/* Custos Evidenciados — Modo Resumo */}
+                            {hasEvidenciadoCosts && (
+                                <div style={{ marginTop: '20px' }}>
+                                    {isLogisticsEvidenciado && (
+                                        <div style={{ marginBottom: '14px', padding: '14px 18px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                <span style={{ fontWeight: 700, fontSize: '12px', color: '#1e293b' }}>Custo Logístico</span>
+                                                <span style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>R$ {fmt(logisticsCost)}</span>
+                                            </div>
+                                            <p style={{ fontSize: '10.5px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                                                {proposal.logisticsCostDescription || 'Custo referente à mobilização e desmobilização de equipes, transporte de equipamentos especializados, veículos operacionais, combustível, pedágios e logística de campo necessários para a execução dos serviços no local da obra.'}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {isAdminEvidenciado && (
+                                        <div style={{ marginBottom: '14px', padding: '14px 18px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                <span style={{ fontWeight: 700, fontSize: '12px', color: '#1e293b' }}>Custo Administrativo</span>
+                                                <span style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>R$ {fmt(adminCost)}</span>
+                                            </div>
+                                            <p style={{ fontSize: '10.5px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                                                {proposal.adminCostDescription || 'Custo referente à gestão administrativa do contrato, incluindo coordenação técnica do projeto, acompanhamento e fiscalização de fornecedores, controle de qualidade, gestão documental, elaboração de relatórios técnicos e suporte operacional durante toda a vigência contratual.'}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {isBrokerageEvidenciado && (
+                                        <div style={{ marginBottom: '14px', padding: '14px 18px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                <span style={{ fontWeight: 700, fontSize: '12px', color: '#1e293b' }}>Corretagem</span>
+                                                <span style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>R$ {fmt(brokerageCost)}</span>
+                                            </div>
+                                            <p style={{ fontSize: '10.5px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                                                {proposal.brokerageCostDescription || 'Custo referente a honorários de intermediação comercial, prospecção de oportunidades, negociação contratual e assessoria técnico-comercial para viabilização do projeto junto ao contratante.'}
+                                            </p>
+                                        </div>
+                                    )}
+                                    {isInsuranceEvidenciado && (
+                                        <div style={{ marginBottom: '14px', padding: '14px 18px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                <span style={{ fontWeight: 700, fontSize: '12px', color: '#1e293b' }}>Seguro</span>
+                                                <span style={{ fontWeight: 700, fontSize: '12px', color: '#0f172a' }}>R$ {fmt(insuranceCost)}</span>
+                                            </div>
+                                            <p style={{ fontSize: '10.5px', color: '#475569', lineHeight: '1.6', margin: 0 }}>
+                                                {proposal.insuranceCostDescription || 'Custo referente à contratação de seguro de responsabilidade civil, cobertura de riscos operacionais, garantia sobre materiais e equipamentos, e proteção patrimonial durante a execução dos serviços conforme exigências normativas aplicáveis.'}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </>

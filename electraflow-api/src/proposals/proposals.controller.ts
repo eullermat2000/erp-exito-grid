@@ -32,8 +32,15 @@ export class ProposalsController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Atualizar proposta' })
-  async update(@Param('id') id: string, @Body() proposalData: Partial<Proposal>) {
-    return this.proposalsService.update(id, proposalData);
+  async update(@Param('id') id: string, @Body() data: { proposal?: Partial<Proposal>; items?: any[] } & Partial<Proposal>) {
+    // Aceita tanto { proposal, items } quanto Partial<Proposal> diretamente
+    const proposalData = data.proposal || data;
+    const result = await this.proposalsService.update(id, proposalData);
+    // Se vieram itens, atualizar também
+    if (data.items && Array.isArray(data.items) && data.items.length > 0) {
+      return this.proposalsService.updateItems(id, data.items);
+    }
+    return result;
   }
 
   @Put(':id/items')

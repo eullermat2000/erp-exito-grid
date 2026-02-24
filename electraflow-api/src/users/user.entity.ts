@@ -34,6 +34,9 @@ export const AVAILABLE_MODULES = [
   'suppliers',
   'quotations',
   'price-history',
+  'fiscal',
+  'compliance',
+  'client-requests',
   'settings',
 ] as const;
 

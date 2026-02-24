@@ -42,7 +42,7 @@ interface NewProtocolDialogProps {
 
 export function NewProtocolDialog({ open, onOpenChange, onSuccess, initialWorkId }: NewProtocolDialogProps) {
     const [loading, setLoading] = useState(false);
-    const [loadingInitial, setLoadingInitial] = useState(false);
+    const [, setLoadingInitial] = useState(false);
     const [works, setWorks] = useState<Work[]>([]);
     const [clients, setClients] = useState<Client[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);

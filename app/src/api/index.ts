@@ -123,6 +123,22 @@ class ApiService {
     return response.data;
   }
 
+  async resetUserPassword(id: string) {
+    const response = await this.client.post(`/users/${id}/reset-password`);
+    return response.data;
+  }
+
+  async heartbeat() {
+    const response = await this.client.post('/users/heartbeat');
+    return response.data;
+  }
+
+  async getUserAvailability(date?: string) {
+    const params = date ? { date } : {};
+    const response = await this.client.get('/users/availability', { params });
+    return response.data;
+  }
+
   // Clients
   async getClients() {
     const response = await this.client.get('/clients');
@@ -1252,13 +1268,59 @@ class ApiService {
     return response.data;
   }
 
-  async createFiscalInvoice(data: { proposalId: string; type: 'nfe' | 'nfse'; naturezaOperacao?: string; finalidadeNfe?: number; cfopCode?: string }) {
+  async createFiscalInvoice(data: {
+    proposalId?: string;
+    type: 'nfe' | 'nfse';
+    naturezaOperacao?: string;
+    finalidadeNfe?: number;
+    cfopCode?: string;
+    customValue?: number;
+    installmentNumber?: number;
+    installmentTotal?: number;
+    // NFS-e specific
+    dCompet?: string;
+    municipioPrestacao?: string;
+    descricaoServico?: string;
+    infoComplementares?: string;
+    numPedido?: string;
+    docReferencia?: string;
+    clientData?: {
+      name: string;
+      document: string;
+      address?: string;
+      number?: string;
+      complement?: string;
+      neighborhood?: string;
+      city?: string;
+      state?: string;
+      zipCode?: string;
+      ibgeCode?: string;
+      email?: string;
+      phone?: string;
+    };
+    items?: {
+      description: string;
+      unit?: string;
+      quantity: number;
+      unitPrice: number;
+      total: number;
+      serviceType?: string;
+      ncm?: string;
+      cfopInterno?: string;
+      origem?: number;
+    }[];
+  }) {
     const response = await this.client.post('/fiscal/invoices', data);
     return response.data;
   }
 
   async cancelFiscalInvoice(id: string, reason: string) {
     const response = await this.client.post(`/fiscal/invoices/${id}/cancel`, { reason });
+    return response.data;
+  }
+
+  async retryFiscalInvoice(id: string) {
+    const response = await this.client.post(`/fiscal/invoices/${id}/retry`);
     return response.data;
   }
 
@@ -1294,6 +1356,23 @@ class ApiService {
 
   async downloadFiscalInvoicePdf(id: string) {
     const response = await this.client.get(`/fiscal/invoices/${id}/pdf`, { responseType: 'blob' });
+    return response.data;
+  }
+
+  // ═══ EMISSÃO PARCIAL / EDIÇÃO DE VALOR ═══════════════════
+
+  async updateFiscalInvoiceValue(id: string, newValue: number, reason: string) {
+    const response = await this.client.put(`/fiscal/invoices/${id}/value`, { newValue, reason });
+    return response.data;
+  }
+
+  async getFiscalInvoiceHistory(id: string) {
+    const response = await this.client.get(`/fiscal/invoices/${id}/history`);
+    return response.data;
+  }
+
+  async getFiscalProposalSummary(proposalId: string) {
+    const response = await this.client.get(`/fiscal/proposal/${proposalId}/summary`);
     return response.data;
   }
 

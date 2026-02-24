@@ -1,5 +1,5 @@
 import {
-    Controller, Get, Post, Put, Delete, Body, Param, Query, Res, UseGuards,
+    Controller, Get, Post, Put, Delete, Body, Param, Query, Res, Req, UseGuards,
     UseInterceptors, UploadedFile, BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
@@ -119,21 +119,67 @@ export class FiscalController {
     @ApiOperation({ summary: 'Emitir nota fiscal via Nuvem Fiscal' })
     async createInvoice(
         @Body() data: {
-            proposalId: string;
+            proposalId?: string;
             type: InvoiceType;
             naturezaOperacao?: string;
             finalidadeNfe?: number;
             cfopCode?: string;
+            customValue?: number;
+            installmentNumber?: number;
+            installmentTotal?: number;
+            // NFS-e specific
+            dCompet?: string;
+            municipioPrestacao?: string;
+            descricaoServico?: string;
+            infoComplementares?: string;
+            numPedido?: string;
+            docReferencia?: string;
+            clientData?: {
+                name: string;
+                document: string;
+                address?: string;
+                number?: string;
+                complement?: string;
+                neighborhood?: string;
+                city?: string;
+                state?: string;
+                zipCode?: string;
+                ibgeCode?: string;
+                email?: string;
+                phone?: string;
+            };
+            items?: {
+                description: string;
+                unit?: string;
+                quantity: number;
+                unitPrice: number;
+                total: number;
+                serviceType?: string;
+                ncm?: string;
+                cfopInterno?: string;
+                origem?: number;
+            }[];
         },
     ) {
         return this.fiscalService.createInvoice(
-            data.proposalId,
+            data.proposalId || null,
             data.type,
             {
                 naturezaOperacao: data.naturezaOperacao,
                 finalidadeNfe: data.finalidadeNfe,
                 cfopCode: data.cfopCode,
+                customValue: data.customValue,
+                installmentNumber: data.installmentNumber,
+                installmentTotal: data.installmentTotal,
+                dCompet: data.dCompet,
+                municipioPrestacao: data.municipioPrestacao,
+                descricaoServico: data.descricaoServico,
+                infoComplementares: data.infoComplementares,
+                numPedido: data.numPedido,
+                docReferencia: data.docReferencia,
             },
+            data.clientData,
+            data.items,
         );
     }
 
@@ -170,11 +216,49 @@ export class FiscalController {
         return this.fiscalService.cancelInvoice(id, data.reason);
     }
 
+    @Post('invoices/:id/retry')
+    @ApiOperation({ summary: 'Reenviar nota fiscal que deu erro ou ficou como rascunho' })
+    async retryInvoice(@Param('id') id: string) {
+        return this.fiscalService.retryInvoice(id);
+    }
+
     // ═══ PREVIEW ═══════════════════════════════════════════════════
 
     @Get('proposal/:proposalId/preview')
     @ApiOperation({ summary: 'Preview dos itens faturáveis de uma proposta' })
     async getProposalPreview(@Param('proposalId') proposalId: string) {
         return this.fiscalService.getProposalPreview(proposalId);
+    }
+
+    // ═══ EDIÇÃO DE VALOR ═══════════════════════════════════════════════
+
+    @Put('invoices/:id/value')
+    @ApiOperation({ summary: 'Editar valor de uma nota fiscal em rascunho' })
+    async updateInvoiceValue(
+        @Param('id') id: string,
+        @Body() data: { newValue: number; reason: string },
+        @Req() req: any,
+    ) {
+        const userId = req.user?.id || req.user?.sub || 'unknown';
+        const userName = req.user?.name || req.user?.email || 'Usuário';
+        return this.fiscalService.updateInvoiceValue(
+            id,
+            data.newValue,
+            userId,
+            userName,
+            data.reason,
+        );
+    }
+
+    @Get('invoices/:id/history')
+    @ApiOperation({ summary: 'Histórico de edições de valor de uma NF' })
+    async getInvoiceEditHistory(@Param('id') id: string) {
+        return this.fiscalService.getInvoiceEditHistory(id);
+    }
+
+    @Get('proposal/:proposalId/summary')
+    @ApiOperation({ summary: 'Resumo de faturamento de uma proposta' })
+    async getProposalSummary(@Param('proposalId') proposalId: string) {
+        return this.fiscalService.getProposalInvoiceSummary(proposalId);
     }
 }

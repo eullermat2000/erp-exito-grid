@@ -30,6 +30,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(false);
   }, []);
 
+  // Heartbeat — registra presença a cada 2 min enquanto logado
+  useEffect(() => {
+    if (!user) return;
+    const sendHeartbeat = () => {
+      api.heartbeat().catch(() => { /* silencioso */ });
+    };
+    sendHeartbeat(); // envia imediatamente no login
+    const interval = setInterval(sendHeartbeat, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [user]);
+
   const login = useCallback(async (email: string, password: string) => {
     setIsLoading(true);
     try {

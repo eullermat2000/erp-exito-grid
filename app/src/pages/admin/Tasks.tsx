@@ -36,7 +36,6 @@ import {
   Clock,
   AlertCircle,
   Calendar,
-  Building2,
   Link2Off,
   Loader2,
   Pencil,

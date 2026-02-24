@@ -198,7 +198,7 @@ export class NuvemFiscalService {
     // ═══════════════════════════════════════════════════════════════
 
     async emitirNfse(config: NuvemFiscalConfig, nfseData: any) {
-        return this.request('POST', '/nfse', config, nfseData);
+        return this.request('POST', '/nfse/dps', config, nfseData);
     }
 
     async consultarNfse(config: NuvemFiscalConfig, id: string) {
